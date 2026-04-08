@@ -1,5 +1,38 @@
-.logo__image { 
-  padding: 10px;
+.bd-header .navbar-brand.logo,
+.bd-sidebar .navbar-brand.logo {
+  max-height: none !important;
+  min-height: 95px !important;
+  display: flex;
+  align-items: center;
+}
+
+.bd-header .navbar-brand.logo .logo__image,
+.bd-sidebar .navbar-brand.logo .logo__image,
+.logo__image {
+  padding: 4px !important;
+  height: 95px !important;
+  width: auto !important;
+  max-height: none !important;
+  max-width: none !important;
+}
+
+/* Force unified logo on every page, regardless of per-page img src path depth. */
+.bd-header .navbar-brand.logo .logo__image,
+.bd-sidebar .navbar-brand.logo .logo__image {
+  display: none !important;
+}
+
+.bd-header .navbar-brand.logo::before,
+.bd-sidebar .navbar-brand.logo::before {
+  content: "";
+  display: block;
+  width: 250px;
+  height: 95px;
+  background-image: url("../../_images/logo.png");
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: left center;
+  transform: translateY(10px);
 }
 @media (min-width: 960px) {
   .bd-sidebar-primary {
