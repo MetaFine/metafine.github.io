@@ -1,12 +1,1361 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" class="">
 <head>
-    <meta charset="utf-8"/>
-    <meta http-equiv="refresh" content="0; url=user_guide/index.html"/>
-    <link rel="canonical" href="user_guide/index.html"/>
-    <title>MetaFine User Guide</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MetaFine — Diagnosing Fine-Grained Robotic Manipulation Beyond Binary Success</title>
+  <meta name="description" content="A compositional meta-evaluation framework that disentangles robotic manipulation into understanding, perception, and behavior, revealing hidden bottlenecks in vision-language-action models." />
+  <link rel="icon" type="image/png" href="logo.png" />
+
+  <!-- Geist via Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CDN (prototype-grade; swap to a build for production) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'Arial', 'system-ui', 'sans-serif'],
+            mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+          },
+          colors: {
+            ink:        '#171717',
+            body:       '#4d4d4d',
+            muted:      '#666666',
+            placeholder:'#808080',
+            hairline:   '#ebebeb',
+            canvas:     '#ffffff',
+            soft:       '#fafafa',
+            link:       '#0072f5',
+            badgebg:    '#ebf5ff',
+            badgetx:    '#0068d6',
+            // 3-axis (Vercel workflow accents → MetaFine diagnostic axes)
+            understand: '#0a72ef',  // Develop Blue
+            perceive:   '#de1d8d',  // Preview Pink
+            behave:     '#ff5b4f',  // Ship Red
+            // dark mode
+            'd-canvas': '#0a0a0a',
+            'd-surface':'#141414',
+            'd-ink':    '#ededed',
+            'd-body':   '#a1a1a1',
+            'd-muted':  '#737373',
+          },
+          letterSpacing: {
+            hero:    '-0.05em',  // -2.4px @ 48px
+            h2:      '-0.04em',  // -1.28px @ 32px
+            h3:      '-0.04em',  // -0.96px @ 24px
+            label:   '-0.02em',
+            none:    '0',
+          },
+          boxShadow: {
+            hairline: '0 0 0 1px rgba(0,0,0,0.08)',
+            'hairline-dark': '0 0 0 1px rgba(255,255,255,0.10)',
+            card:     '0 0 0 1px rgba(0,0,0,0.08), 0 2px 2px rgba(0,0,0,0.04), 0 8px 8px -8px rgba(0,0,0,0.04)',
+            'card-dark':'0 0 0 1px rgba(255,255,255,0.10), 0 2px 2px rgba(0,0,0,0.4), 0 8px 8px -8px rgba(0,0,0,0.5)',
+            ring:     '0 0 0 1px #ebebeb',
+          },
+          maxWidth: { container: '1200px' },
+          borderRadius: { pill: '9999px', img: '12px' },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    html { font-feature-settings: "liga" 1, "calt" 1; }
+    body { font-family: 'Geist', Arial, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .font-mono { font-feature-settings: "liga" 1, "tnum" 1; }
+    /* Soft pastel hero gradient (atmospheric, barely visible) */
+    .hero-gradient {
+      background:
+        radial-gradient(ellipse 60% 50% at 20% 10%, rgba(10,114,239,0.08), transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 20%, rgba(222,29,141,0.06), transparent 60%),
+        radial-gradient(ellipse 50% 60% at 70% 90%, rgba(255,91,79,0.06), transparent 60%);
+    }
+    .dark .hero-gradient {
+      background:
+        radial-gradient(ellipse 60% 50% at 20% 10%, rgba(10,114,239,0.18), transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 20%, rgba(222,29,141,0.14), transparent 60%),
+        radial-gradient(ellipse 50% 60% at 70% 90%, rgba(255,91,79,0.14), transparent 60%);
+    }
+    /* Selection */
+    ::selection { background: #171717; color: #fafafa; }
+    .dark ::selection { background: #ededed; color: #0a0a0a; }
+    /* Smooth theme transition */
+    body, .theme-tx { transition: background-color .25s ease, color .25s ease, box-shadow .25s ease; }
+    /* Coming-soon disabled buttons */
+    .btn-disabled { cursor: not-allowed; opacity: .55; }
+    /* Hairline divider that flips for dark */
+    .hairline-b { box-shadow: inset 0 -1px 0 rgba(0,0,0,0.08); }
+    .dark .hairline-b { box-shadow: inset 0 -1px 0 rgba(255,255,255,0.10); }
+    /* Bar chart animation */
+    .bar-fill { width: 0; transition: width 900ms cubic-bezier(0.16, 1, 0.3, 1); }
+    .in-view .bar-fill { width: var(--w); }
+    .bar-fill.is-zero { width: 2px !important; opacity: 0.35; }
+
+    /* Task-graph node + line animation */
+    .tg-node { opacity: 0; transform: translateY(4px); transform-origin: center; transition: opacity 500ms cubic-bezier(0.16,1,0.3,1), transform 500ms cubic-bezier(0.16,1,0.3,1); }
+    .in-view .tg-node { opacity: 1; transform: translateY(0); }
+    .tg-line { stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 700ms cubic-bezier(0.16,1,0.3,1); }
+    .in-view .tg-line { stroke-dashoffset: 0; }
+    .in-view .tg-d0 { transition-delay:    0ms; }
+    .in-view .tg-d1 { transition-delay:  120ms; }
+    .in-view .tg-d2 { transition-delay:  240ms; }
+    .in-view .tg-d3 { transition-delay:  360ms; }
+    .in-view .tg-d4 { transition-delay:  480ms; }
+    .in-view .tg-d5 { transition-delay:  600ms; }
+    .in-view .tg-d6 { transition-delay:  720ms; }
+    .in-view .tg-d7 { transition-delay:  840ms; }
+    .in-view .tg-d8 { transition-delay:  960ms; }
+    .in-view .tg-d9 { transition-delay: 1080ms; }
+
+    /* Architecture-diagram dark-mode-flippable fills */
+    .arch-bg     { fill: #ffffff; }
+    .arch-bg2    { fill: #fafafa; }
+    .arch-fg     { fill: #171717; }
+    .arch-muted  { fill: #4d4d4d; }
+    .arch-faint  { fill: #999999; }
+    .arch-stroke-fg { stroke: #171717; }
+    .dark .arch-bg     { fill: #141414; }
+    .dark .arch-bg2    { fill: #1c1c1c; }
+    .dark .arch-fg     { fill: #ededed; }
+    .dark .arch-muted  { fill: #a1a1a1; }
+    .dark .arch-faint  { fill: #737373; }
+    .dark .arch-stroke-fg { stroke: #ededed; }
+
+    /* Hide scrollbar (used by horizontal task video carousel) */
+    .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+
+    /* Justify body paragraphs (no longer left-aligned) */
+    p { text-align: justify; text-justify: inter-word; }
+    /* Keep utility/short copy left-aligned where appropriate */
+    nav p, header p, footer p, figcaption p { text-align: left; }
+  </style>
+
+  <!-- Inline theme bootstrap — runs BEFORE body renders to avoid light-flash.
+       Default = dark; flip to light only if user explicitly picked light. -->
+  <script>
+    (function() {
+      var saved = null;
+      try { saved = localStorage.getItem('theme'); } catch (e) {}
+      if (saved !== 'light') document.documentElement.classList.add('dark');
+    })();
+  </script>
 </head>
-<body>
-    <p>Redirecting to <a href="user_guide/index.html">MetaFine User Guide</a>...</p>
+
+<body class="bg-canvas text-ink dark:bg-d-canvas dark:text-d-ink antialiased">
+
+  <!-- ─────────────────────────── NAV ─────────────────────────── -->
+  <header class="sticky top-0 z-40 backdrop-blur bg-canvas/80 dark:bg-d-canvas/80 hairline-b">
+    <div class="max-w-container mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="#" class="flex items-baseline gap-0 text-[24px] font-semibold leading-none" style="letter-spacing:-0.045em" aria-label="MetaFine home">
+        <span class="text-ink dark:text-d-ink">Meta</span><span class="text-behave">Fine</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-[16px] font-medium text-ink dark:text-d-ink">
+        <a href="#problem"   class="hover:text-link">Overview</a>
+        <a href="#framework" class="hover:text-link">Evaluation Protocol</a>
+        <a href="#taskgraph" class="hover:text-link">Composable</a>
+        <a href="#findings"  class="hover:text-link">Findings</a>
+        <a href="#realsim"   class="hover:text-link">Hybrid Evaluation</a>
+        <a href="user_guide/index.html" class="hover:text-link inline-flex items-center gap-1">
+          User Guide
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17 17 7M9 7h8v8"/></svg>
+        </a>
+      </nav>
+      <div class="flex items-center gap-2">
+        <button id="themeToggle" aria-label="Toggle theme"
+                class="theme-tx h-8 w-8 rounded-md shadow-hairline dark:shadow-hairline-dark grid place-items-center hover:bg-soft dark:hover:bg-d-surface">
+          <!-- sun -->
+          <svg class="hidden dark:block" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <!-- moon -->
+          <svg class="block dark:hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+        </button>
+        <a href="#" class="btn-disabled inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ink text-canvas dark:bg-d-ink dark:text-d-canvas text-[14px] font-medium" title="Coming soon">
+          GitHub
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17 17 7M9 7h8v8"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─────────────────────────── HERO ─────────────────────────── -->
+  <section class="relative hero-gradient">
+    <div class="max-w-container mx-auto px-6 pt-12 pb-20 md:pt-16 md:pb-28">
+
+      <div class="font-mono text-[12px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-6">
+        META-EVALUATION FRAMEWORK · FINE-GRAINED MANIPULATION · 2026
+      </div>
+
+      <h1 class="font-semibold text-[40px] md:text-[56px] leading-[1.02] tracking-hero text-ink dark:text-d-ink max-w-[920px]">
+        Diagnosing Fine-Grained Manipulation
+        <span class="text-behave">Beyond Binary Success.</span>
+      </h1>
+
+      <p class="mt-5 text-[20px] md:text-[24px] italic font-medium leading-snug text-ink dark:text-d-ink" style="letter-spacing:-0.02em">
+        A diagnostic compass, not just a benchmark.
+      </p>
+
+      <p class="mt-6 max-w-[860px] text-[18px] md:text-[20px] leading-[1.7] text-body dark:text-d-body">
+        MetaFine is a <span class="font-medium text-ink dark:text-d-ink">diagnostic evaluation
+        framework</span> for fine-grained robotic manipulation. Rather than collapsing
+        manipulation into a single binary success rate, MetaFine disentangles policy capability
+        into three fundamental dimensions —
+        <span class="text-understand font-medium">understanding</span>,
+        <span class="text-perceive font-medium">perception</span>, and
+        <span class="text-behave font-medium">behavior</span> — and reveals the hidden failure
+        modes that conventional benchmarks miss. Built on a
+        <span class="font-medium text-ink dark:text-d-ink">compositional task graph</span> and
+        an <span class="font-medium text-ink dark:text-d-ink">extensible asset library</span>,
+        MetaFine can generate diverse fine-grained tasks, absorb heterogeneous benchmarks,
+        and support both simulation-based diagnosis and
+        <span class="font-medium text-ink dark:text-d-ink">hybrid real–sim evaluation</span>.
+        By turning evaluation from a leaderboard into a tool for
+        <span class="font-medium text-ink dark:text-d-ink">scientific diagnosis</span>, MetaFine
+        provides the infrastructure needed to measure, understand, and ultimately improve
+        genuine physical dexterity.
+      </p>
+
+      <!-- Authors (placeholder) -->
+      <div class="mt-8 text-[15px] text-ink dark:text-d-ink">
+        <div class="flex flex-wrap gap-x-4 gap-y-1">
+          <span>Author One<sup class="text-muted">1</sup></span>
+          <span>Author Two<sup class="text-muted">1,2</sup></span>
+          <span>Author Three<sup class="text-muted">2</sup></span>
+          <span>Author Four<sup class="text-muted">1</sup></span>
+          <span class="text-muted">…</span>
+        </div>
+        <div class="mt-1.5 text-[13px] text-muted dark:text-d-muted">
+          <sup>1</sup>Institution A &nbsp;·&nbsp; <sup>2</sup>Institution B
+        </div>
+      </div>
+
+      <!-- CTAs (all coming soon) -->
+      <div class="mt-9 flex flex-wrap gap-2">
+        <a class="btn-disabled inline-flex items-center gap-2 h-10 px-4 rounded-md bg-ink text-canvas dark:bg-d-ink dark:text-d-canvas text-[14px] font-medium" title="Coming soon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          Paper
+          <span class="ml-1 font-mono text-[11px] uppercase tracking-wider text-canvas/60 dark:text-d-canvas/60">soon</span>
+        </a>
+        <a class="btn-disabled inline-flex items-center gap-2 h-10 px-4 rounded-md shadow-hairline dark:shadow-hairline-dark text-[14px] font-medium" title="Coming soon">
+          Code <span class="font-mono text-[11px] uppercase tracking-wider text-muted">soon</span>
+        </a>
+        <a class="btn-disabled inline-flex items-center gap-2 h-10 px-4 rounded-md shadow-hairline dark:shadow-hairline-dark text-[14px] font-medium" title="Coming soon">
+          Dataset <span class="font-mono text-[11px] uppercase tracking-wider text-muted">soon</span>
+        </a>
+        <a class="btn-disabled inline-flex items-center gap-2 h-10 px-4 rounded-md shadow-hairline dark:shadow-hairline-dark text-[14px] font-medium" title="Coming soon">
+          Demo <span class="font-mono text-[11px] uppercase tracking-wider text-muted">soon</span>
+        </a>
+        <a class="btn-disabled inline-flex items-center gap-2 h-10 px-4 rounded-md shadow-hairline dark:shadow-hairline-dark text-[14px] font-medium" title="Coming soon">
+          Benchmark <span class="font-mono text-[11px] uppercase tracking-wider text-muted">soon</span>
+        </a>
+      </div>
+
+      <!-- Architecture diagram (horizontal flow) -->
+      <figure id="archDiagram" class="mt-14 rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+        <div class="px-5 md:px-7 pt-5 md:pt-6 pb-2 flex items-baseline justify-between flex-wrap gap-2">
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-wider text-muted dark:text-d-muted mb-1">architecture · framework overview</div>
+            <h3 class="text-[18px] md:text-[20px] font-semibold tracking-h3">From atomic primitives to diagnostic findings</h3>
+          </div>
+          <span class="font-mono text-[10px] uppercase tracking-wider text-muted dark:text-d-muted hidden sm:inline">how MetaFine fits together</span>
+        </div>
+        <div class="px-3 md:px-5 pb-5">
+          <svg viewBox="0 0 1200 290" class="w-full h-auto block" xmlns="http://www.w3.org/2000/svg" font-family="Geist Mono, monospace">
+            <defs>
+              <marker id="archArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M0,0 L10,5 L0,10 z" class="arch-fg" />
+              </marker>
+            </defs>
+
+            <!-- ── COL 1 · INPUTS ── -->
+            <text x="20" y="22" font-size="10" font-weight="600" letter-spacing="1.2" class="arch-faint">01 · INPUTS</text>
+            <g class="tg-node tg-d0">
+              <rect x="20" y="35" width="260" height="240" rx="10" class="arch-bg2" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity="0.3"/>
+            </g>
+            <!-- Atomic Skills sub-card -->
+            <g class="tg-node tg-d1">
+              <rect x="36" y="55" width="228" height="100" rx="8" class="arch-bg" stroke="#ff5b4f" stroke-width="1.5"/>
+              <text x="48" y="76" font-size="10" font-weight="600" fill="#ff5b4f" letter-spacing="1.2">ATOMIC SKILLS</text>
+              <text x="48" y="98" font-family="Geist, sans-serif" font-size="12" font-weight="600" class="arch-fg">Composable Primitives</text>
+              <text x="48" y="118" font-size="9" class="arch-muted">grasp · align · insert · rotate</text>
+              <text x="48" y="132" font-size="9" class="arch-muted">slide · press · toggle</text>
+              <text x="48" y="148" font-size="9" fill="#ff5b4f">+ extensible</text>
+            </g>
+            <!-- Asset Library sub-card -->
+            <g class="tg-node tg-d1">
+              <rect x="36" y="165" width="228" height="100" rx="8" class="arch-bg" stroke="#0a72ef" stroke-width="1.5"/>
+              <text x="48" y="186" font-size="10" font-weight="600" fill="#0a72ef" letter-spacing="1.2">ASSET LIBRARY</text>
+              <text x="48" y="208" font-family="Geist, sans-serif" font-size="12" font-weight="600" class="arch-fg">Part-Aware Assets</text>
+              <text x="48" y="228" font-size="9" class="arch-muted">431 obj · 1,078 parts</text>
+              <text x="48" y="242" font-size="9" class="arch-muted">4,312 grasps</text>
+              <text x="48" y="258" font-size="9" fill="#0a72ef">+ annotation tools</text>
+            </g>
+
+            <!-- Arrow 1 -->
+            <path d="M 285 155 H 315" pathLength="100" class="arch-stroke-fg tg-line tg-d2" stroke-width="1.5" fill="none" marker-end="url(#archArrow)"/>
+
+            <!-- ── COL 2 · ENGINE ── -->
+            <text x="320" y="22" font-size="10" font-weight="600" letter-spacing="1.2" class="arch-faint">02 · ENGINE</text>
+            <g class="tg-node tg-d2">
+              <rect x="320" y="35" width="260" height="240" rx="10" class="arch-bg2" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity="0.3"/>
+            </g>
+            <g class="tg-node tg-d3">
+              <rect x="336" y="55" width="228" height="210" rx="8" class="arch-bg" stroke="#ff5b4f" stroke-width="1.5" stroke-dasharray="5 4"/>
+              <text x="450" y="80" text-anchor="middle" font-size="10" font-weight="600" fill="#ff5b4f" letter-spacing="1.2">TASK GRAPH</text>
+              <text x="450" y="118" text-anchor="middle" font-family="Geist, sans-serif" font-size="14" font-weight="600" class="arch-fg">Compositional</text>
+              <text x="450" y="138" text-anchor="middle" font-family="Geist, sans-serif" font-size="14" font-weight="600" class="arch-fg">Task Graph</text>
+              <text x="450" y="170" text-anchor="middle" font-size="10" class="arch-muted">Auto-compose tasks of</text>
+              <text x="450" y="186" text-anchor="middle" font-size="10" class="arch-muted">arbitrary complexity</text>
+              <text x="450" y="226" text-anchor="middle" font-size="9" class="arch-faint">absorbs external benchmarks</text>
+              <text x="450" y="242" text-anchor="middle" font-size="9" class="arch-faint">RoboTwin · CALVIN · LIBERO</text>
+            </g>
+
+            <!-- Arrow 2 -->
+            <path d="M 585 155 H 615" pathLength="100" class="arch-stroke-fg tg-line tg-d4" stroke-width="1.5" fill="none" marker-end="url(#archArrow)"/>
+
+            <!-- ── COL 3 · DIAGNOSE ── -->
+            <text x="620" y="22" font-size="10" font-weight="600" letter-spacing="1.2" class="arch-faint">03 · 3-AXIS DIAGNOSE</text>
+            <g class="tg-node tg-d4">
+              <rect x="620" y="35" width="260" height="240" rx="10" class="arch-bg2" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity="0.3"/>
+            </g>
+            <g class="tg-node tg-d5">
+              <rect x="636" y="55" width="228" height="63" rx="8" class="arch-bg" stroke="#0a72ef" stroke-width="1.5"/>
+              <text x="750" y="80" text-anchor="middle" font-size="11" font-weight="600" fill="#0a72ef" letter-spacing="1.2">UNDERSTANDING</text>
+              <text x="750" y="102" text-anchor="middle" font-family="Geist, sans-serif" font-size="10" class="arch-muted">semantic intervention</text>
+            </g>
+            <g class="tg-node tg-d5">
+              <rect x="636" y="125" width="228" height="63" rx="8" class="arch-bg" stroke="#de1d8d" stroke-width="1.5"/>
+              <text x="750" y="150" text-anchor="middle" font-size="11" font-weight="600" fill="#de1d8d" letter-spacing="1.2">PERCEPTION</text>
+              <text x="750" y="172" text-anchor="middle" font-family="Geist, sans-serif" font-size="10" class="arch-muted">view + light perturbation</text>
+            </g>
+            <g class="tg-node tg-d5">
+              <rect x="636" y="195" width="228" height="63" rx="8" class="arch-bg" stroke="#ff5b4f" stroke-width="1.5"/>
+              <text x="750" y="220" text-anchor="middle" font-size="11" font-weight="600" fill="#ff5b4f" letter-spacing="1.2">BEHAVIOR</text>
+              <text x="750" y="242" text-anchor="middle" font-family="Geist, sans-serif" font-size="10" class="arch-muted">stage success + smoothness</text>
+            </g>
+
+            <!-- Arrow 3 -->
+            <path d="M 885 155 H 915" pathLength="100" class="arch-stroke-fg tg-line tg-d6" stroke-width="1.5" fill="none" marker-end="url(#archArrow)"/>
+
+            <!-- ── COL 4 · OUTPUTS ── -->
+            <text x="920" y="22" font-size="10" font-weight="600" letter-spacing="1.2" class="arch-faint">04 · OUTPUTS</text>
+            <g class="tg-node tg-d6">
+              <rect x="920" y="35" width="260" height="240" rx="10" class="arch-bg2" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity="0.3"/>
+            </g>
+            <g class="tg-node tg-d7">
+              <rect x="936" y="55" width="228" height="100" rx="8" class="arch-bg arch-stroke-fg" stroke-width="1.5"/>
+              <text x="1050" y="80" text-anchor="middle" font-size="10" font-weight="600" letter-spacing="1.2" class="arch-fg">DIAGNOSTIC FINDINGS</text>
+              <text x="1050" y="106" text-anchor="middle" font-family="Geist, sans-serif" font-size="13" font-weight="600" class="arch-fg">Findings for</text>
+              <text x="1050" y="124" text-anchor="middle" font-family="Geist, sans-serif" font-size="13" font-weight="600" class="arch-fg">Fine-Grained Manipulation</text>
+              <text x="1050" y="144" text-anchor="middle" font-size="9" class="arch-muted">policy capabilities &amp; failure modes</text>
+            </g>
+
+            <g class="tg-node tg-d7">
+              <rect x="936" y="165" width="228" height="100" rx="8" class="arch-bg arch-stroke-fg" stroke-width="1.5"/>
+              <text x="1050" y="190" text-anchor="middle" font-size="10" font-weight="600" letter-spacing="1.2" class="arch-fg">HYBRID EVALUATION</text>
+
+              <!-- Visual: few real (filled) + many sim (outlined) -->
+              <g transform="translate(1050, 217)">
+                <!-- 3 filled "real" squares (centered around x=-58) -->
+                <rect x="-66" y="-4" width="6" height="8" rx="1" class="arch-fg"/>
+                <rect x="-58" y="-4" width="6" height="8" rx="1" class="arch-fg"/>
+                <rect x="-50" y="-4" width="6" height="8" rx="1" class="arch-fg"/>
+                <!-- + sign -->
+                <text x="-34" y="4" font-family="Geist Mono, monospace" font-size="11" class="arch-faint">+</text>
+                <!-- 8 outlined "sim" squares -->
+                <g transform="translate(-18, -4)">
+                  <rect x="0"  y="0" width="6" height="8" rx="1" fill="none" stroke-width="0.9" class="arch-stroke-fg"/>
+                  <rect x="9"  y="0" width="6" height="8" rx="1" fill="none" stroke-width="0.9" class="arch-stroke-fg"/>
+                  <rect x="18" y="0" width="6" height="8" rx="1" fill="none" stroke-width="0.9" class="arch-stroke-fg"/>
+                  <rect x="27" y="0" width="6" height="8" rx="1" fill="none" stroke-width="0.9" class="arch-stroke-fg"/>
+                  <rect x="36" y="0" width="6" height="8" rx="1" fill="none" stroke-width="0.9" class="arch-stroke-fg"/>
+                  <rect x="45" y="0" width="6" height="8" rx="1" fill="none" stroke-width="0.9" class="arch-stroke-fg"/>
+                  <rect x="54" y="0" width="6" height="8" rx="1" fill="none" stroke-width="0.9" class="arch-stroke-fg"/>
+                  <rect x="63" y="0" width="6" height="8" rx="1" fill="none" stroke-width="0.9" class="arch-stroke-fg"/>
+                </g>
+              </g>
+              <!-- labels beneath visual -->
+              <text x="996"  y="237" text-anchor="middle" font-family="Geist Mono, monospace" font-size="8" class="arch-faint">FEW REAL</text>
+              <text x="1066" y="237" text-anchor="middle" font-family="Geist Mono, monospace" font-size="8" class="arch-faint">MANY SIM</text>
+              <text x="1050" y="256" text-anchor="middle" font-size="9" class="arch-muted">→ calibrated hybrid estimate</text>
+            </g>
+          </svg>
+        </div>
+      </figure>
+
+      <!-- ── Features title ── -->
+      <h2 class="mt-10 text-[28px] md:text-[34px] font-semibold leading-[1.05] tracking-h2 text-behave">
+        Features.
+      </h2>
+
+      <!-- ── 6 feature highlights strip (now ABOVE video carousel) ── -->
+      <div class="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="p-4 rounded-[8px] shadow-hairline dark:shadow-hairline-dark bg-canvas dark:bg-d-surface theme-tx">
+          <div class="font-mono text-[10px] uppercase tracking-wider mb-2" style="color:#de1d8d">3 dimension</div>
+          <div class="text-[13px] font-semibold tracking-h3 leading-snug mb-1.5">Three-dimensional diagnosis</div>
+          <div class="text-[11.5px] leading-[1.45] text-body dark:text-d-body">Evaluate understanding, perception, and behavior separately to expose hidden failure modes.</div>
+        </div>
+        <div class="p-4 rounded-[8px] shadow-hairline dark:shadow-hairline-dark bg-canvas dark:bg-d-surface theme-tx">
+          <div class="font-mono text-[10px] uppercase tracking-wider mb-2" style="color:#ff5b4f">composable</div>
+          <div class="text-[13px] font-semibold tracking-h3 leading-snug mb-1.5">Atomic compositional skills and tasks</div>
+          <div class="text-[11.5px] leading-[1.45] text-body dark:text-d-body">Compose arbitrary fine-grained tasks from reusable atomic manipulation skills.</div>
+        </div>
+        <div class="p-4 rounded-[8px] shadow-hairline dark:shadow-hairline-dark bg-canvas dark:bg-d-surface theme-tx">
+          <div class="font-mono text-[10px] uppercase tracking-wider mb-2" style="color:#0a72ef">fine-grained assets</div>
+          <div class="text-[13px] font-semibold tracking-h3 leading-snug mb-1.5">Fine-grained assets</div>
+          <div class="text-[11.5px] leading-[1.45] text-body dark:text-d-body">Build on fine-grained object annotations with rapid tools for scalable asset expansion.</div>
+        </div>
+        <div class="p-4 rounded-[8px] shadow-hairline dark:shadow-hairline-dark bg-canvas dark:bg-d-surface theme-tx">
+          <div class="font-mono text-[10px] uppercase tracking-wider mb-2" style="color:#7928ca">real + sim</div>
+          <div class="text-[13px] font-semibold tracking-h3 leading-snug mb-1.5">Hybrid real–sim evaluation</div>
+          <div class="text-[11.5px] leading-[1.45] text-body dark:text-d-body">Bridge simulation and reality with hybrid evaluation under limited hardware budgets.</div>
+        </div>
+        <div class="p-4 rounded-[8px] shadow-hairline dark:shadow-hairline-dark bg-canvas dark:bg-d-surface theme-tx">
+          <div class="font-mono text-[10px] uppercase tracking-wider mb-2" style="color:#0d9b6c">easy to use</div>
+          <div class="text-[13px] font-semibold tracking-h3 leading-snug mb-1.5">Drop-in install</div>
+          <div class="text-[11.5px] leading-[1.45] text-body dark:text-d-body">Get started with a single <span class="font-mono">pip install metafine</span> — no infrastructure setup required.</div>
+        </div>
+        <div class="p-4 rounded-[8px] shadow-hairline dark:shadow-hairline-dark bg-canvas dark:bg-d-surface theme-tx">
+          <div class="font-mono text-[10px] uppercase tracking-wider mb-2" style="color:#e8a55a">built-in agent</div>
+          <div class="text-[13px] font-semibold tracking-h3 leading-snug mb-1.5">Agent + skill library</div>
+          <div class="text-[11.5px] leading-[1.45] text-body dark:text-d-body">An embedded agent with reusable skills automates most simulation and evaluation tasks end-to-end.</div>
+        </div>
+      </div>
+
+      <!-- ── Task video carousel (horizontal scroll) ── -->
+      <div class="mt-6">
+        <div class="flex items-baseline justify-between mb-3 px-1">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-muted dark:text-d-muted">
+            sample tasks · scroll to browse
+          </div>
+          <div class="hidden md:flex items-center gap-2">
+            <button data-task-scroll="-1" aria-label="Scroll left"
+                    class="h-8 w-8 rounded-full grid place-items-center shadow-hairline dark:shadow-hairline-dark hover:bg-soft dark:hover:bg-d-surface theme-tx">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18 L9 12 L15 6"/></svg>
+            </button>
+            <button data-task-scroll="1" aria-label="Scroll right"
+                    class="h-8 w-8 rounded-full grid place-items-center shadow-hairline dark:shadow-hairline-dark hover:bg-soft dark:hover:bg-d-surface theme-tx">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6 L15 12 L9 18"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="relative">
+          <div id="taskScroller" class="overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar -mx-1 px-1">
+            <div class="flex gap-3 pb-2">
+
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+                <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+                  <video src="task-i.mp4" autoplay muted loop playsinline preload="metadata" class="w-full h-full object-cover"></video>
+                </div>
+              </figure>
+
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+                <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+                  <video src="task-e.mp4" autoplay muted loop playsinline preload="metadata" class="w-full h-full object-cover"></video>
+                </div>
+              </figure>
+
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+                <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+                  <video src="task-box.mp4" autoplay muted loop playsinline preload="metadata" class="w-full h-full object-cover"></video>
+                </div>
+              </figure>
+
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+                <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+                  <video src="task-full.mp4" autoplay muted loop playsinline preload="metadata" class="w-full h-full object-cover"></video>
+                </div>
+              </figure>
+
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+                <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+                  <video src="task-gs1.mp4" autoplay muted loop playsinline preload="metadata" class="w-full h-full object-cover"></video>
+                </div>
+              </figure>
+
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+                <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+                  <video src="task-gs2.mp4" autoplay muted loop playsinline preload="metadata" class="w-full h-full object-cover"></video>
+                </div>
+              </figure>
+
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+                <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+                  <video src="task-peg.mp4" autoplay muted loop playsinline preload="metadata" class="w-full h-full object-cover"></video>
+                </div>
+              </figure>
+
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+                <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+                  <video src="task-stack.mp4" autoplay muted loop playsinline preload="metadata" class="w-full h-full object-cover"></video>
+                </div>
+              </figure>
+
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+                <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+                  <video src="task-toggle.mp4" autoplay muted loop playsinline preload="metadata" class="w-full h-full object-cover"></video>
+                </div>
+              </figure>
+
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface theme-tx">
+                <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+                  <video src="task-r1.mp4" autoplay muted loop playsinline preload="metadata" class="w-full h-full object-cover"></video>
+                </div>
+              </figure>
+
+              <!-- Extensible (dashed card, no caption) -->
+              <figure class="snap-start shrink-0 w-[260px] md:w-[280px] rounded-img overflow-hidden border-2 border-dashed bg-canvas/40 dark:bg-d-surface/40 theme-tx" style="border-color:rgba(255,91,79,0.45)">
+                <div class="aspect-[4/3] grid place-items-center px-4">
+                  <div class="text-center">
+                    <div class="font-mono text-[28px] font-semibold tracking-h2 leading-none mb-2" style="color:#ff5b4f">+ ∞</div>
+                    <div class="text-[15px] font-semibold tracking-h3 leading-snug text-ink dark:text-d-ink">Arbitrarily extensible</div>
+                    <div class="mt-2 font-mono text-[10px] uppercase tracking-wider text-muted dark:text-d-muted leading-tight">
+                      compose any FG task<br/>from atomic skills
+                    </div>
+                  </div>
+                </div>
+              </figure>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── PROBLEM ───────────────────────── -->
+  <section id="problem" class="hairline-b">
+    <div class="max-w-container mx-auto px-6 py-16 md:py-20 grid md:grid-cols-12 gap-10">
+      <div class="md:col-span-5">
+        <div class="font-mono text-[12px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">01 · Overview</div>
+        <h2 class="text-[36px] md:text-[40px] font-semibold leading-[1.1] tracking-h2">
+          Binary success is not enough.
+        </h2>
+        <p class="mt-5 text-[17px] md:text-[18px] leading-[1.7] text-muted dark:text-d-muted max-w-[480px]">
+          MetaFine is a diagnostic framework for fine-grained robotic manipulation. It moves
+          beyond binary success rates to reveal hidden failures in understanding, perception,
+          and behavior, enabling unified evaluation across benchmarks, simulation, and the
+          real world.
+        </p>
+      </div>
+      <div class="md:col-span-7 grid sm:grid-cols-2 gap-4">
+
+        <!-- Card 1 · Three-dimensional diagnosis -->
+        <article class="p-5 rounded-[8px] shadow-hairline dark:shadow-hairline-dark hover:shadow-card dark:hover:shadow-card-dark theme-tx">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-muted mb-3">three axes</div>
+          <h3 class="text-[18px] md:text-[19px] font-semibold tracking-h3 leading-[1.25]">Three-dimensional diagnosis</h3>
+          <p class="mt-2 text-[14px] leading-[1.55] text-body dark:text-d-body">
+            Disentangle manipulation into <span class="text-understand font-medium">understanding</span>,
+            <span class="text-perceive font-medium">perception</span>, and
+            <span class="text-behave font-medium">behavior</span> instead of collapsing everything
+            into binary success.
+          </p>
+        </article>
+
+        <!-- Card 2 · Extensible task ecosystem (atomic skills + assets + benchmark absorption) -->
+        <article class="p-5 rounded-[8px] shadow-hairline dark:shadow-hairline-dark hover:shadow-card dark:hover:shadow-card-dark theme-tx">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-muted mb-3">ecosystem</div>
+          <h3 class="text-[18px] md:text-[19px] font-semibold tracking-h3 leading-[1.25]">Extensible ecosystem</h3>
+          <p class="mt-2 text-[14px] leading-[1.55] text-body dark:text-d-body">
+            Compose fine-grained tasks from atomic skills, scale to thousands of part-aware
+            assets, and absorb heterogeneous external benchmarks under a single diagnostic
+            formalism.
+          </p>
+        </article>
+
+        <!-- Card 3 · Specific findings -->
+        <article class="p-5 rounded-[8px] shadow-hairline dark:shadow-hairline-dark hover:shadow-card dark:hover:shadow-card-dark theme-tx">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-muted mb-3">specific findings</div>
+          <h3 class="text-[18px] md:text-[19px] font-semibold tracking-h3 leading-[1.25]">Pinpoint architectural bottlenecks</h3>
+          <p class="mt-2 text-[14px] leading-[1.55] text-body dark:text-d-body">
+            Surface dimension-specific failure modes — semantic grounding gaps, visual encoder
+            ceilings, and action-head trade-offs — translating aggregate scores into actionable
+            design insights.
+          </p>
+        </article>
+
+        <!-- Card 4 · Hybrid real–sim evaluation -->
+        <article class="p-5 rounded-[8px] shadow-hairline dark:shadow-hairline-dark hover:shadow-card dark:hover:shadow-card-dark theme-tx">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-muted mb-3">real + sim</div>
+          <h3 class="text-[18px] md:text-[19px] font-semibold tracking-h3 leading-[1.25]">Hybrid real–sim evaluation</h3>
+          <p class="mt-2 text-[14px] leading-[1.55] text-body dark:text-d-body">
+            Combine scalable simulation with limited real-world rollouts for more stable
+            performance estimation under scarce hardware budgets.
+          </p>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────── FRAMEWORK (3-AXIS) ─────────────────────── -->
+  <section id="framework" class="hairline-b">
+    <div class="max-w-container mx-auto px-6 py-16 md:py-20">
+      <div class="max-w-[760px] mx-auto text-center">
+        <div class="font-mono text-[12px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">02 · Evaluation Protocol</div>
+        <h2 class="text-[36px] md:text-[40px] font-semibold leading-[1.1] tracking-h2">
+          A three-dimensional diagnostic framework.
+        </h2>
+        <p class="mt-5 text-[18px] leading-[1.65] text-body dark:text-d-body">
+          MetaFine decomposes robotic manipulation into three complementary axes — enabling
+          researchers to identify not only whether a policy fails, but exactly <em class="not-italic font-medium text-ink dark:text-d-ink">where</em>
+          and <em class="not-italic font-medium text-ink dark:text-d-ink">why</em> it fails.
+        </p>
+      </div>
+
+      <div class="mt-12 grid md:grid-cols-3 gap-5">
+        <!-- AXIS 1: UNDERSTANDING -->
+        <article class="p-6 rounded-[8px] bg-canvas dark:bg-d-surface shadow-card dark:shadow-card-dark theme-tx">
+          <div class="flex items-center gap-2 mb-5">
+            <span class="h-1.5 w-1.5 rounded-full" style="background:#0a72ef"></span>
+            <span class="font-mono text-[12px] uppercase tracking-[0.08em] text-understand">01 / UNDERSTANDING</span>
+          </div>
+          <h3 class="text-[24px] font-semibold leading-[1.25] tracking-h3 text-ink dark:text-d-ink">
+            Comprehend, or replay?
+          </h3>
+          <p class="mt-3 text-[16px] leading-[1.55] text-body dark:text-d-body">
+            Probe whether models understand fine-grained semantic instructions, such as
+            selecting a different part of the same object, rather than replaying memorized
+            routines.
+          </p>
+          <div class="mt-5 grid grid-cols-2 gap-2">
+            <figure class="rounded-md overflow-hidden shadow-hairline dark:shadow-hairline-dark bg-soft dark:bg-d-canvas">
+              <div class="aspect-[4/3] overflow-hidden">
+                <img src="grasp-cap.jpg" alt="Robot gripper grasping the cap of a bottle"
+                     class="w-full h-full object-cover select-none" draggable="false" />
+              </div>
+              <figcaption class="px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider leading-tight">
+                <span class="text-muted">original</span><br/>grasp the <span class="text-understand">cap</span>
+              </figcaption>
+            </figure>
+            <figure class="rounded-md overflow-hidden shadow-hairline dark:shadow-hairline-dark bg-soft dark:bg-d-canvas">
+              <div class="aspect-[4/3] overflow-hidden">
+                <img src="grasp-body.jpg" alt="Robot gripper grasping the body of a bottle"
+                     class="w-full h-full object-cover select-none" draggable="false" />
+              </div>
+              <figcaption class="px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider leading-tight">
+                <span class="text-muted">intervene</span><br/>grasp the <span class="text-understand">body</span>
+              </figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <!-- AXIS 2: PERCEPTION -->
+        <article class="p-6 rounded-[8px] bg-canvas dark:bg-d-surface shadow-card dark:shadow-card-dark theme-tx">
+          <div class="flex items-center gap-2 mb-5">
+            <span class="h-1.5 w-1.5 rounded-full" style="background:#de1d8d"></span>
+            <span class="font-mono text-[12px] uppercase tracking-[0.08em] text-perceive">02 / PERCEPTION</span>
+          </div>
+          <h3 class="text-[24px] font-semibold leading-[1.25] tracking-h3 text-ink dark:text-d-ink">
+            Precise perception for fine-grained manipulation.
+          </h3>
+          <p class="mt-3 text-[16px] leading-[1.55] text-body dark:text-d-body">
+            Probe whether policies preserve precise part-level perception at close range,
+            under both geometric perturbations in viewpoint and pose and photometric
+            perturbations in lighting and color.
+          </p>
+          <div class="mt-5 grid grid-cols-3 gap-2">
+            <figure class="rounded-md overflow-hidden shadow-hairline dark:shadow-hairline-dark bg-soft dark:bg-d-canvas">
+              <div class="aspect-square overflow-hidden">
+                <img src="perceive-original.jpg" alt="Original viewpoint and lighting"
+                     class="w-full h-full object-cover select-none" draggable="false" />
+              </div>
+              <figcaption class="px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider leading-tight text-muted">
+                original
+              </figcaption>
+            </figure>
+            <figure class="rounded-md overflow-hidden shadow-hairline dark:shadow-hairline-dark bg-soft dark:bg-d-canvas">
+              <div class="aspect-square overflow-hidden">
+                <img src="perceive-view.jpg" alt="Geometric perturbation: viewpoint change"
+                     class="w-full h-full object-cover select-none" draggable="false" />
+              </div>
+              <figcaption class="px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider leading-tight">
+                <span class="text-perceive">view</span>
+              </figcaption>
+            </figure>
+            <figure class="rounded-md overflow-hidden shadow-hairline dark:shadow-hairline-dark bg-soft dark:bg-d-canvas">
+              <div class="aspect-square overflow-hidden">
+                <img src="perceive-light.jpg" alt="Photometric perturbation: lighting change"
+                     class="w-full h-full object-cover select-none" draggable="false" />
+              </div>
+              <figcaption class="px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider leading-tight">
+                <span class="text-perceive">light</span>
+              </figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <!-- AXIS 3: BEHAVIOR -->
+        <article class="p-6 rounded-[8px] bg-canvas dark:bg-d-surface shadow-card dark:shadow-card-dark theme-tx">
+          <div class="flex items-center gap-2 mb-5">
+            <span class="h-1.5 w-1.5 rounded-full" style="background:#ff5b4f"></span>
+            <span class="font-mono text-[12px] uppercase tracking-[0.08em] text-behave">03 / BEHAVIOR</span>
+          </div>
+          <h3 class="text-[24px] font-semibold leading-[1.25] tracking-h3 text-ink dark:text-d-ink">
+            Fine-grained behavior through stage-wise success and smoothness.
+          </h3>
+          <p class="mt-3 text-[16px] leading-[1.55] text-body dark:text-d-body">
+            Behavior is measured through stage-wise success and trajectory smoothness,
+            revealing whether policies can both progress through long-horizon tasks and
+            execute controlled motions.
+          </p>
+          <div class="mt-5 flex flex-wrap gap-1.5">
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">grasp</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">align</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">insert</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">rotate</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">slide</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">press</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">toggle</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium border border-dashed" style="border-color:rgba(255,91,79,0.5);color:#ff5b4f">+ extensible</span>
+          </div>
+        </article>
+      </div>
+
+      <!-- Per-task evaluation bar chart with tabs -->
+      <figure class="mt-10 rounded-img shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface p-6 md:p-8 theme-tx">
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-wider text-muted dark:text-d-muted mb-1">benchmark · 7 vlas × 6 tasks</div>
+            <h3 class="text-[18px] md:text-[20px] font-semibold tracking-h3">Per-task success rate across state-of-the-art VLAs</h3>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="inline-flex items-center p-1 rounded-md shadow-hairline dark:shadow-hairline-dark">
+              <button data-eval-tab="original" class="eval-tab px-3 h-7 rounded text-[11px] font-medium font-mono uppercase tracking-wider transition-colors">Original</button>
+              <button data-eval-tab="view"     class="eval-tab px-3 h-7 rounded text-[11px] font-medium font-mono uppercase tracking-wider transition-colors">View&nbsp;Δ</button>
+              <button data-eval-tab="light"    class="eval-tab px-3 h-7 rounded text-[11px] font-medium font-mono uppercase tracking-wider transition-colors">Light&nbsp;Δ</button>
+            </div>
+            <span class="font-mono text-[11px] uppercase tracking-wider text-muted dark:text-d-muted hidden sm:inline">success · %</span>
+          </div>
+        </div>
+        <div id="evalChartGrid"></div>
+        <div class="mt-6 pt-4" style="box-shadow:inset 0 1px 0 rgba(0,0,0,0.06)">
+          <div class="font-mono text-[10px] uppercase tracking-wider text-muted dark:text-d-muted">
+            best per task highlighted in <span class="text-behave font-medium">red</span> ·
+            tabs switch evaluation condition · bars re-animate on each switch
+          </div>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ─────────────────── COMPOSABLE MANIPULATION ─────────────────── -->
+  <section id="taskgraph" class="hairline-b">
+    <div class="max-w-container mx-auto px-6 py-16 md:py-20">
+
+      <!-- Section header -->
+      <div class="max-w-[820px]">
+        <div class="font-mono text-[12px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">03 · Composable Manipulation</div>
+        <h2 class="text-[36px] md:text-[40px] font-semibold leading-[1.1] tracking-h2">
+          Composable fine-grained manipulation.
+        </h2>
+        <p class="mt-5 text-[18px] leading-[1.65] text-body dark:text-d-body">
+          MetaFine builds tasks bottom-up from two reusable building blocks — atomic skill
+          primitives and a part-aware asset library — enabling structured task generation,
+          benchmark absorption, and scalable diagnostic coverage.
+        </p>
+      </div>
+
+      <!-- Pillar A: Atomic fine-grained skills -->
+      <div class="mt-14 grid md:grid-cols-12 gap-10 items-start">
+        <div class="md:col-span-5">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-muted dark:text-d-muted mb-3">A · Atomic Fine-Grained Skills</div>
+          <h3 class="text-[24px] md:text-[28px] font-semibold leading-[1.2] tracking-h3">
+            Tasks composed from atomic primitives.
+          </h3>
+          <p class="mt-4 text-[16px] leading-[1.6] text-body dark:text-d-body">
+            Each task is a graph: nodes are atomic skills (grasp-part, align, insert,
+            rotate-along, slide, press-part, toggle-part) and edges encode dependencies.
+            Paths through the graph define tasks of arbitrary complexity, enabling structured
+            absorption of external benchmarks under a single formalism.
+          </p>
+          <div class="mt-5 flex flex-wrap gap-1.5">
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">grasp-part</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">align</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">insert</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">rotate-along</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">slide</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">press-part</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium" style="background:rgba(255,91,79,0.10);color:#ff5b4f">toggle-part</span>
+            <span class="px-2.5 h-6 inline-flex items-center rounded-pill text-[12px] font-medium border border-dashed" style="border-color:rgba(255,91,79,0.5);color:#ff5b4f">+ extensible</span>
+          </div>
+        </div>
+
+        <div class="md:col-span-7">
+          <figure id="taskGraphFig" class="rounded-img shadow-card dark:shadow-card-dark bg-soft dark:bg-d-surface aspect-[3/2] relative theme-tx max-w-[560px] mx-auto">
+            <svg viewBox="0 0 600 400" class="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" font-family="Geist Mono, monospace">
+              <defs>
+                <marker id="arrowB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                  <path d="M0,0 L10,5 L0,10 z" fill="#0a72ef"/>
+                </marker>
+                <marker id="arrowP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                  <path d="M0,0 L10,5 L0,10 z" fill="#de1d8d"/>
+                </marker>
+              </defs>
+
+              <!-- vertical dashed connector between parallel paths (separator) -->
+              <path d="M 110 124 L 110 246" pathLength="100" stroke="#cccccc" class="dark:stroke-[#404040]" stroke-width="1" fill="none"/>
+
+              <!-- ROW 1: GRASP → ALIGN → {INSERT, ROTATE, SLIDE} -->
+              <!-- arrows -->
+              <path d="M 170 90 L 226 90" pathLength="100" stroke="#0a72ef" stroke-width="1.5" fill="none" marker-end="url(#arrowB)" class="tg-line tg-d2"/>
+              <path d="M 350 90 C 386 90, 386 42, 416 42"  pathLength="100" stroke="#de1d8d" stroke-width="1.5" fill="none" marker-end="url(#arrowP)" class="tg-line tg-d3"/>
+              <path d="M 350 90 L 416 92"                  pathLength="100" stroke="#de1d8d" stroke-width="1.5" fill="none" marker-end="url(#arrowP)" class="tg-line tg-d4"/>
+              <path d="M 350 90 C 386 90, 386 144, 416 144" pathLength="100" stroke="#de1d8d" stroke-width="1.5" fill="none" marker-end="url(#arrowP)" class="tg-line tg-d5"/>
+
+              <!-- GRASP top -->
+              <g class="tg-node tg-d0">
+                <rect x="50" y="58" width="120" height="64" rx="10" fill="#ffffff" class="dark:fill-[#141414]" stroke="#0a72ef" stroke-width="1.5"/>
+                <text x="110" y="86" text-anchor="middle" font-size="13" font-weight="600" fill="#0a72ef" letter-spacing="0.5">GRASP</text>
+                <text x="110" y="103" text-anchor="middle" font-size="9.5" fill="#666" font-family="Geist, sans-serif">Acquire part</text>
+              </g>
+              <!-- ALIGN top -->
+              <g class="tg-node tg-d1">
+                <rect x="226" y="58" width="124" height="64" rx="10" fill="#ffffff" class="dark:fill-[#141414]" stroke="#de1d8d" stroke-width="1.5"/>
+                <text x="288" y="86" text-anchor="middle" font-size="13" font-weight="600" fill="#de1d8d" letter-spacing="0.5">ALIGN</text>
+                <text x="288" y="103" text-anchor="middle" font-size="9.5" fill="#666" font-family="Geist, sans-serif">Position precisely</text>
+              </g>
+              <!-- INSERT -->
+              <g class="tg-node tg-d3">
+                <rect x="416" y="20" width="140" height="44" rx="8" fill="#ffffff" class="dark:fill-[#141414]" stroke="#ff5b4f" stroke-width="1.5"/>
+                <text x="486" y="40" text-anchor="middle" font-size="12" font-weight="600" fill="#ff5b4f" letter-spacing="0.5">INSERT</text>
+                <text x="486" y="54" text-anchor="middle" font-size="9" fill="#666" font-family="Geist, sans-serif">Insert into slot</text>
+              </g>
+              <!-- ROTATE -->
+              <g class="tg-node tg-d4">
+                <rect x="416" y="70" width="140" height="44" rx="8" fill="#ffffff" class="dark:fill-[#141414]" stroke="#ff5b4f" stroke-width="1.5"/>
+                <text x="486" y="90" text-anchor="middle" font-size="12" font-weight="600" fill="#ff5b4f" letter-spacing="0.5">ROTATE</text>
+                <text x="486" y="104" text-anchor="middle" font-size="9" fill="#666" font-family="Geist, sans-serif">Rotate in place</text>
+              </g>
+              <!-- SLIDE -->
+              <g class="tg-node tg-d5">
+                <rect x="416" y="120" width="140" height="44" rx="8" fill="#ffffff" class="dark:fill-[#141414]" stroke="#ff5b4f" stroke-width="1.5"/>
+                <text x="486" y="140" text-anchor="middle" font-size="12" font-weight="600" fill="#ff5b4f" letter-spacing="0.5">SLIDE</text>
+                <text x="486" y="154" text-anchor="middle" font-size="9" fill="#666" font-family="Geist, sans-serif">Slide along axis</text>
+              </g>
+
+              <!-- ROW 2: GRASP → ALIGN → {PRESS, TOGGLE} -->
+              <path d="M 170 290 L 226 290" pathLength="100" stroke="#0a72ef" stroke-width="1.5" fill="none" marker-end="url(#arrowB)" class="tg-line tg-d6"/>
+              <path d="M 350 290 C 386 290, 386 252, 416 252" pathLength="100" stroke="#de1d8d" stroke-width="1.5" fill="none" marker-end="url(#arrowP)" class="tg-line tg-d7"/>
+              <path d="M 350 290 C 386 290, 386 332, 416 332" pathLength="100" stroke="#de1d8d" stroke-width="1.5" fill="none" marker-end="url(#arrowP)" class="tg-line tg-d8"/>
+
+              <!-- GRASP bot -->
+              <g class="tg-node tg-d4">
+                <rect x="50" y="258" width="120" height="64" rx="10" fill="#ffffff" class="dark:fill-[#141414]" stroke="#0a72ef" stroke-width="1.5"/>
+                <text x="110" y="286" text-anchor="middle" font-size="13" font-weight="600" fill="#0a72ef" letter-spacing="0.5">GRASP</text>
+                <text x="110" y="303" text-anchor="middle" font-size="9.5" fill="#666" font-family="Geist, sans-serif">Acquire part</text>
+              </g>
+              <!-- ALIGN bot -->
+              <g class="tg-node tg-d5">
+                <rect x="226" y="258" width="124" height="64" rx="10" fill="#ffffff" class="dark:fill-[#141414]" stroke="#de1d8d" stroke-width="1.5"/>
+                <text x="288" y="286" text-anchor="middle" font-size="13" font-weight="600" fill="#de1d8d" letter-spacing="0.5">ALIGN</text>
+                <text x="288" y="303" text-anchor="middle" font-size="9.5" fill="#666" font-family="Geist, sans-serif">Position precisely</text>
+              </g>
+              <!-- PRESS -->
+              <g class="tg-node tg-d7">
+                <rect x="416" y="230" width="140" height="44" rx="8" fill="#ffffff" class="dark:fill-[#141414]" stroke="#ff5b4f" stroke-width="1.5"/>
+                <text x="486" y="250" text-anchor="middle" font-size="12" font-weight="600" fill="#ff5b4f" letter-spacing="0.5">PRESS</text>
+                <text x="486" y="264" text-anchor="middle" font-size="9" fill="#666" font-family="Geist, sans-serif">Press down</text>
+              </g>
+              <!-- TOGGLE -->
+              <g class="tg-node tg-d8">
+                <rect x="416" y="310" width="140" height="44" rx="8" fill="#ffffff" class="dark:fill-[#141414]" stroke="#ff5b4f" stroke-width="1.5"/>
+                <text x="486" y="330" text-anchor="middle" font-size="12" font-weight="600" fill="#ff5b4f" letter-spacing="0.5">TOGGLE</text>
+                <text x="486" y="344" text-anchor="middle" font-size="9" fill="#666" font-family="Geist, sans-serif">Toggle state</text>
+              </g>
+
+              <!-- mini legend bottom-left -->
+              <g font-family="Geist Mono, monospace" font-size="9" fill="#888">
+                <circle cx="20" cy="382" r="3" fill="none" stroke="#0a72ef" stroke-width="1.2"/>
+                <text x="30" y="385">grasp</text>
+                <circle cx="80" cy="382" r="3" fill="none" stroke="#de1d8d" stroke-width="1.2"/>
+                <text x="90" y="385">align</text>
+                <rect x="138" y="378" width="8" height="8" rx="2" fill="none" stroke="#ff5b4f" stroke-width="1.2"/>
+                <text x="152" y="385">manipulation</text>
+              </g>
+            </svg>
+          </figure>
+        </div>
+      </div>
+
+      <!-- Pillar B: Extensible asset library -->
+      <div class="mt-16 grid md:grid-cols-12 gap-10 items-start">
+        <div class="md:col-span-5">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-muted dark:text-d-muted mb-3">B · Extensible Asset Library</div>
+          <h3 class="text-[24px] md:text-[28px] font-semibold leading-[1.2] tracking-h3">
+            Scalable, part-aware assets.
+          </h3>
+          <p class="mt-4 text-[16px] leading-[1.6] text-body dark:text-d-body">
+            MetaFine ships with a part-annotated object library and rapid annotation tooling.
+            Assets plug directly into the task graph, and external benchmarks are absorbed
+            under the same compositional formalism for unified diagnostic comparison.
+          </p>
+        </div>
+
+        <div class="md:col-span-7">
+          <figure class="rounded-img shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface overflow-hidden theme-tx">
+            <div class="bg-soft dark:bg-d-canvas">
+              <img src="assets.png"
+                   alt="MetaFine asset library: parts, grasp poses, scenes"
+                   class="w-full h-auto block select-none"
+                   draggable="false" />
+            </div>
+            <figcaption class="px-5 py-4 grid grid-cols-3 gap-3" style="box-shadow:inset 0 1px 0 rgba(0,0,0,0.06)">
+              <div>
+                <div class="text-[26px] md:text-[28px] font-semibold tracking-h2 leading-none">431</div>
+                <div class="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted">objects</div>
+              </div>
+              <div>
+                <div class="text-[26px] md:text-[28px] font-semibold tracking-h2 leading-none">1,078</div>
+                <div class="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted">annotated parts</div>
+              </div>
+              <div>
+                <div class="text-[26px] md:text-[28px] font-semibold tracking-h2 leading-none">4,312</div>
+                <div class="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted">grasp poses</div>
+              </div>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── KEY FINDINGS ───────────────────────── -->
+  <section id="findings" class="hairline-b bg-soft/40 dark:bg-d-surface/30">
+    <div class="max-w-container mx-auto px-6 py-16 md:py-20">
+      <div class="max-w-[760px]">
+        <div class="font-mono text-[12px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">04 · Key Findings</div>
+        <h2 class="text-[36px] md:text-[40px] font-semibold leading-[1.1] tracking-h2">
+          What MetaFine reveals.
+        </h2>
+        <p class="mt-4 text-[18px] md:text-[20px] italic text-muted dark:text-d-muted leading-snug" style="letter-spacing:-0.02em">
+          We cannot build what we cannot measure.
+        </p>
+      </div>
+
+      <!-- Six findings -->
+      <div class="mt-10 grid md:grid-cols-2 gap-5">
+        <article class="p-6 rounded-[8px] bg-canvas dark:bg-d-surface shadow-card dark:shadow-card-dark">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Finding 01</div>
+          <h3 class="text-[20px] font-semibold leading-[1.3] tracking-h3">Binary success inflates capability.</h3>
+          <p class="mt-2 text-[15px] leading-[1.55] text-body dark:text-d-body">
+            Policies that appear strong under binary benchmarks often fail once part-level
+            semantic and physical constraints are enforced. Under disentangled evaluation,
+            agents scoring <span class="font-mono text-ink dark:text-d-ink">85%</span> on conventional
+            benchmarks can drop to <span class="font-mono text-ink dark:text-d-ink">40%</span>,
+            revealing that binary success often conflates lucky completion with genuine
+            fine-grained skill.
+          </p>
+        </article>
+
+        <article class="p-6 rounded-[8px] bg-canvas dark:bg-d-surface shadow-card dark:shadow-card-dark">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-understand mb-2">Finding 02 · Understanding</div>
+          <h3 class="text-[20px] font-semibold leading-[1.3] tracking-h3">Training paradigm matters more than scale.</h3>
+          <p class="mt-2 text-[15px] leading-[1.55] text-body dark:text-d-body">
+            Semantic grounding is governed more by how a model is trained than by how large
+            it is. End-to-end policies often conflate language with visual priors, whereas
+            modular architectures better preserve fine-grained instruction-following under
+            attribute-level semantic changes.
+          </p>
+        </article>
+
+        <article class="p-6 rounded-[8px] bg-canvas dark:bg-d-surface shadow-card dark:shadow-card-dark">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-perceive mb-2">Finding 03 · Perception</div>
+          <h3 class="text-[20px] font-semibold leading-[1.3] tracking-h3">Visual resolution sets a hard precision ceiling.</h3>
+          <p class="mt-2 text-[15px] leading-[1.55] text-body dark:text-d-body">
+            Fine-grained manipulation depends on whether the encoder can resolve precise
+            part-level spatial structure. When spatial fidelity is insufficient, downstream
+            action generation cannot recover the missing information, making visual resolution
+            an absolute ceiling on manipulation precision.
+          </p>
+        </article>
+
+        <article class="p-6 rounded-[8px] bg-canvas dark:bg-d-surface shadow-card dark:shadow-card-dark">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-perceive mb-2">Finding 04 · Perception</div>
+          <h3 class="text-[20px] font-semibold leading-[1.3] tracking-h3">Geometric and photometric robustness fail differently.</h3>
+          <p class="mt-2 text-[15px] leading-[1.55] text-body dark:text-d-body">
+            Robustness is not a single property. Geometric robustness is tied primarily to
+            encoder spatial representations, while photometric robustness depends more strongly
+            on modality-level invariance and pretraining diversity, exposing distinct failure
+            sources under visual change.
+          </p>
+        </article>
+
+        <article class="p-6 rounded-[8px] bg-canvas dark:bg-d-surface shadow-card dark:shadow-card-dark">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-behave mb-2">Finding 05 · Behavior</div>
+          <h3 class="text-[20px] font-semibold leading-[1.3] tracking-h3">Behavior trades off stability and expressiveness.</h3>
+          <p class="mt-2 text-[15px] leading-[1.55] text-body dark:text-d-body">
+            Deterministic action generation produces stable but rigid trajectories, while
+            stochastic generation offers more diverse corrections but is more vulnerable to
+            accumulated spatial drift. Fine-grained execution therefore depends not only on
+            control smoothness, but also on how different action paradigms propagate
+            perceptual uncertainty.
+          </p>
+        </article>
+
+        <article class="p-6 rounded-[8px] bg-canvas dark:bg-d-surface shadow-card dark:shadow-card-dark">
+          <div class="font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Finding 06</div>
+          <h3 class="text-[20px] font-semibold leading-[1.3] tracking-h3">Hybrid real–sim evaluation stabilizes estimation.</h3>
+          <p class="mt-2 text-[15px] leading-[1.55] text-body dark:text-d-body">
+            Small-batch hardware evaluation is inherently noisy and can misrepresent true
+            policy performance. By calibrating large-scale simulation with a limited set of
+            paired real rollouts, hybrid real–sim evaluation produces estimates that are
+            substantially more stable and more faithful to real-world capability.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────── HYBRID REAL–SIM ─────────────────────── -->
+  <section id="realsim" class="hairline-b">
+    <div class="max-w-container mx-auto px-6 py-16 md:py-20">
+
+      <!-- Header -->
+      <div class="max-w-[820px]">
+        <div class="font-mono text-[12px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">05 · Hybrid Real–Sim</div>
+        <h2 class="text-[36px] md:text-[40px] font-semibold leading-[1.1] tracking-h2">
+          Scalable real-world validation.
+        </h2>
+        <p class="mt-5 text-[18px] leading-[1.65] text-body dark:text-d-body">
+          MetaFine integrates <span class="font-medium text-ink dark:text-d-ink">3D Gaussian Splatting</span>-based
+          real-to-sim transfer with <span class="font-medium text-ink dark:text-d-ink">prediction-powered inference</span>.
+          A small number of paired real-world rollouts calibrates large-scale simulation — enabling stable,
+          reproducible estimates of true policy performance under limited hardware budgets.
+        </p>
+      </div>
+
+      <!-- Pipeline + PPI plot (single observed container) -->
+      <div id="realSimPipeline" class="mt-12">
+
+        <!-- 3-stage horizontal pipeline -->
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr] gap-5 md:gap-4 items-center">
+
+          <!-- Stage 1 · REAL -->
+          <figure class="tg-node tg-d0 group rounded-img shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface overflow-hidden theme-tx transition-transform duration-300 hover:-translate-y-0.5">
+            <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+              <img src="real.png" alt="Real-world physical setup" class="w-full h-full object-cover select-none" draggable="false" />
+            </div>
+            <figcaption class="px-3.5 py-2.5 flex items-baseline justify-between gap-2 hairline-b" style="box-shadow:inset 0 1px 0 rgba(0,0,0,0.06)">
+              <span class="font-mono text-[11px] uppercase tracking-wider text-ink dark:text-d-ink">01 · Real</span>
+              <span class="font-mono text-[10px] uppercase tracking-wider text-muted dark:text-d-muted">physical capture</span>
+            </figcaption>
+          </figure>
+
+          <!-- Arrow 1: real2sim transition -->
+          <div class="tg-node tg-d1 hidden md:flex flex-col items-center gap-2 px-1 self-center">
+            <svg viewBox="0 0 100 16" class="w-20 h-4 overflow-visible" fill="none" aria-hidden="true">
+              <path d="M2 8 H86" stroke="currentColor" class="text-ink dark:text-d-ink tg-line tg-d2" stroke-width="1.5" pathLength="100" stroke-linecap="round" />
+              <path d="M82 3 L92 8 L82 13" stroke="currentColor" class="text-ink dark:text-d-ink" stroke-width="1.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+            </svg>
+            <span class="font-mono text-[10px] uppercase tracking-wider text-muted dark:text-d-muted text-center leading-tight">
+              real2sim transition<br/>
+              <span class="text-ink dark:text-d-ink">with mobile device</span>
+            </span>
+          </div>
+          <!-- Mobile vertical separator (rendered between cards on small screens) -->
+          <div class="md:hidden flex flex-col items-center text-muted dark:text-d-muted gap-1 py-1">
+            <span class="font-mono text-[10px] uppercase tracking-wider">real2sim · mobile device ↓</span>
+          </div>
+
+          <!-- Stage 2 · SIM -->
+          <figure class="tg-node tg-d2 group rounded-img shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface overflow-hidden theme-tx transition-transform duration-300 hover:-translate-y-0.5">
+            <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden">
+              <img src="sim.png" alt="3DGS-reconstructed simulation scene" class="w-full h-full object-cover select-none" draggable="false" />
+            </div>
+            <figcaption class="px-3.5 py-2.5 flex items-baseline justify-between gap-2" style="box-shadow:inset 0 1px 0 rgba(0,0,0,0.06)">
+              <span class="font-mono text-[11px] uppercase tracking-wider text-ink dark:text-d-ink">02 · Sim</span>
+              <span class="font-mono text-[10px] uppercase tracking-wider text-muted dark:text-d-muted">3DGS reconstruction</span>
+            </figcaption>
+          </figure>
+
+          <!-- Arrow 2: policy rollout -->
+          <div class="tg-node tg-d3 hidden md:flex flex-col items-center gap-2 px-1 self-center">
+            <svg viewBox="0 0 100 16" class="w-20 h-4 overflow-visible" fill="none" aria-hidden="true">
+              <path d="M2 8 H86" stroke="currentColor" class="text-ink dark:text-d-ink tg-line tg-d4" stroke-width="1.5" pathLength="100" stroke-linecap="round" />
+              <path d="M82 3 L92 8 L82 13" stroke="currentColor" class="text-ink dark:text-d-ink" stroke-width="1.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+            </svg>
+            <span class="font-mono text-[10px] uppercase tracking-wider text-muted dark:text-d-muted text-center leading-tight">
+              policy rollout<br/>
+              <span class="text-ink dark:text-d-ink">in simulation</span>
+            </span>
+          </div>
+          <div class="md:hidden flex flex-col items-center text-muted dark:text-d-muted gap-1 py-1">
+            <span class="font-mono text-[10px] uppercase tracking-wider">policy rollout ↓</span>
+          </div>
+
+          <!-- Stage 3 · ROLLOUT VIDEO -->
+          <figure class="tg-node tg-d4 group rounded-img shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface overflow-hidden theme-tx transition-transform duration-300 hover:-translate-y-0.5">
+            <div class="aspect-[4/3] bg-soft dark:bg-d-canvas overflow-hidden relative">
+              <video src="sim-rollout.mp4" autoplay muted loop playsinline preload="metadata"
+                     poster="sim.png"
+                     class="w-full h-full object-cover select-none"></video>
+              <span class="absolute top-2 right-2 inline-flex items-center gap-1 px-2 h-5 rounded-pill bg-ink/80 text-canvas font-mono text-[9px] uppercase tracking-wider backdrop-blur">
+                <span class="h-1.5 w-1.5 rounded-full bg-behave animate-pulse"></span>
+                live
+              </span>
+            </div>
+            <figcaption class="px-3.5 py-2.5 flex items-baseline justify-between gap-2" style="box-shadow:inset 0 1px 0 rgba(0,0,0,0.06)">
+              <span class="font-mono text-[11px] uppercase tracking-wider text-ink dark:text-d-ink">03 · Rollout</span>
+              <span class="font-mono text-[10px] uppercase tracking-wider text-muted dark:text-d-muted">policy execution</span>
+            </figcaption>
+          </figure>
+
+        </div>
+
+        <!-- PPI calibration plot -->
+        <figure class="tg-node tg-d6 mt-12 rounded-img shadow-card dark:shadow-card-dark bg-canvas dark:bg-d-surface overflow-hidden theme-tx">
+          <div class="px-5 md:px-6 pt-5 md:pt-6 pb-2 flex items-baseline justify-between flex-wrap gap-2">
+            <div>
+              <div class="font-mono text-[11px] uppercase tracking-wider text-muted dark:text-d-muted mb-1">04 · PPI calibration</div>
+              <h3 class="text-[18px] md:text-[20px] font-semibold tracking-h3">Limited real trials calibrate large-scale sim estimates.</h3>
+            </div>
+            <span class="font-mono text-[10px] uppercase tracking-wider text-muted dark:text-d-muted">prediction-powered inference</span>
+          </div>
+          <div class="px-2 md:px-4 pb-4">
+            <img src="ppi-correction.png"
+                 alt="PPI calibration plot — comparison across conditions"
+                 class="w-full h-auto block select-none" draggable="false" />
+          </div>
+        </figure>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── BIBTEX / FOOTER ───────────────────────── -->
+  <section id="cite">
+    <div class="max-w-container mx-auto px-6 py-16 md:py-20">
+      <div class="font-mono text-[12px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">06 · Cite</div>
+      <h2 class="text-[28px] md:text-[32px] font-semibold leading-[1.15] tracking-h2 mb-5">
+        BibTeX
+      </h2>
+      <div class="relative rounded-[8px] shadow-hairline dark:shadow-hairline-dark bg-soft dark:bg-d-surface p-5 font-mono text-[13px] leading-[1.55] overflow-x-auto theme-tx">
+<pre class="text-ink dark:text-d-ink">@inproceedings{metafine2026,
+  title     = {MetaFine: Diagnosing Fine-Grained Robotic Manipulation Beyond Binary Success},
+  author    = {Author One and Author Two and Author Three and others},
+  booktitle = {<i class="text-muted not-italic">Venue (placeholder)</i>},
+  year      = {2026},
+  url       = {<i class="text-muted not-italic">https://metafine.example.org</i>}
+}</pre>
+        <button id="copyBib" class="absolute top-3 right-3 h-7 px-2.5 rounded-md shadow-hairline dark:shadow-hairline-dark bg-canvas dark:bg-d-surface text-[12px] font-medium hover:bg-soft dark:hover:bg-d-canvas">
+          Copy
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="hairline-b" style="box-shadow: inset 0 1px 0 rgba(0,0,0,0.08)">
+    <div class="max-w-container mx-auto px-6 py-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-[13px] text-muted dark:text-d-muted">
+      <div class="flex items-baseline gap-2">
+        <span class="font-semibold text-ink dark:text-d-ink"><span>Meta</span><span class="text-behave">Fine</span></span>
+        <span>· 2026</span>
+        <span class="hidden md:inline">·</span>
+        <span class="hidden md:inline">Released under MIT (placeholder)</span>
+      </div>
+      <div class="flex items-center gap-5">
+        <a href="mailto:contact@example.org" class="hover:text-link">contact@example.org</a>
+        <a href="#" class="hover:text-link">GitHub</a>
+        <a href="#" class="hover:text-link">arXiv</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Theme toggle — persists explicit choice; default (no saved value) is dark.
+    const root = document.documentElement;
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      root.classList.toggle('dark');
+      localStorage.setItem('theme', root.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    // Copy BibTeX
+    document.getElementById('copyBib').addEventListener('click', (e) => {
+      const txt = document.querySelector('#cite pre').innerText;
+      navigator.clipboard.writeText(txt).then(() => {
+        const b = e.currentTarget;
+        const t = b.innerText; b.innerText = 'Copied'; setTimeout(() => b.innerText = t, 1200);
+      });
+    });
+
+    // ── Per-task evaluation bar chart (with tab switching) ──────────
+    const evalModels = ['ACT', 'DP3', 'OCTO', 'OpenVLA', 'OpenVLA-OFT', 'π₀', 'π₀.₅'];
+    const evalDatasets = {
+      original: {
+        label: 'Original',
+        tasks: [
+          { name: 'Grasp Part',   values: [49,    75,    35,    35,    37,    75,    80   ] },
+          { name: 'Toggle Part',  values: [63,    85,    49,    45,    50,    81,    79   ] },
+          { name: 'Press Part',   values: [63,    63,    44,    53,    59,    65,    68   ] },
+          { name: 'Slide Along',  values: [ 8,     5,     9,    15,    18,    20,    22   ] },
+          { name: 'Rotate Along', values: [ 0,     0,     0,     5,    12,    13,    10   ] },
+          { name: 'Open Hinge',   values: [ 0,     3,     2,     8,    10,    12,    13   ] },
+        ],
+      },
+      view: {
+        label: 'View Δ',
+        tasks: [
+          { name: 'Grasp Part',   values: [41.83, 38.75, 15.50, 14.17, 14.50, 63.17, 61.83] },
+          { name: 'Toggle Part',  values: [48.67, 53.50, 26.67, 23.00, 32.75, 59.00, 59.50] },
+          { name: 'Press Part',   values: [41.67, 39.00, 30.67, 35.00, 40.50, 45.67, 48.50] },
+          { name: 'Slide Along',  values: [ 4.50,  2.67,  4.83,  8.00, 10.17, 11.83, 13.17] },
+          { name: 'Rotate Along', values: [ 0.00,  0.00,  0.00,  0.83,  5.67,  7.50,  4.67] },
+          { name: 'Open Hinge',   values: [ 0.00,  1.33,  0.67,  3.67,  4.83,  5.33,  5.83] },
+        ],
+      },
+      light: {
+        label: 'Light Δ',
+        tasks: [
+          { name: 'Grasp Part',   values: [35.17, 75.25, 22.33, 26.00, 25.50, 51.50, 53.50] },
+          { name: 'Toggle Part',  values: [34.33, 84.50, 24.17, 21.50, 23.25, 53.00, 47.67] },
+          { name: 'Press Part',   values: [34.83, 62.00, 23.17, 28.83, 35.50, 47.83, 42.50] },
+          { name: 'Slide Along',  values: [ 4.17,  3.17,  5.50,  8.33,  8.83, 11.33, 11.33] },
+          { name: 'Rotate Along', values: [ 0.00,  0.00,  0.00,  1.83,  5.00,  6.50,  3.33] },
+          { name: 'Open Hinge',   values: [ 0.00,  1.33,  1.00,  3.67,  4.00,  4.67,  5.00] },
+        ],
+      },
+    };
+
+    function fmtVal(v) { return v % 1 === 0 ? String(v) : v.toFixed(1); }
+
+    function renderEvalChart(target, datasetKey) {
+      const ds = evalDatasets[datasetKey];
+      const cells = ds.tasks.map(task => {
+        const max = Math.max(...task.values);
+        const rows = task.values.map((v, i) => {
+          const isMax = v === max && v > 0;
+          const isZero = v === 0;
+          const fillClass = isMax ? 'bg-behave' : 'bg-ink/70 dark:bg-d-ink/60';
+          const valClass  = isMax ? 'text-behave font-medium' : 'text-muted dark:text-d-muted';
+          return `
+            <div class="grid grid-cols-[78px_1fr_36px] items-center gap-2">
+              <span class="font-mono text-[11px] text-muted dark:text-d-muted truncate">${evalModels[i]}</span>
+              <div class="h-2.5 rounded-sm bg-soft dark:bg-d-canvas overflow-hidden shadow-hairline dark:shadow-hairline-dark">
+                <div class="bar-fill h-full ${fillClass} rounded-sm ${isZero ? 'is-zero' : ''}" style="--w: ${v}%"></div>
+              </div>
+              <span class="font-mono text-[11px] tabular-nums text-right ${valClass}">${fmtVal(v)}</span>
+            </div>
+          `;
+        }).join('');
+        return `
+          <div class="chart-cell">
+            <div class="font-mono text-[11px] uppercase tracking-wider text-ink dark:text-d-ink mb-3">${task.name}</div>
+            <div class="space-y-1.5">${rows}</div>
+          </div>
+        `;
+      }).join('');
+      target.innerHTML = `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-7">${cells}</div>`;
+    }
+
+    function styleEvalTabs(activeKey) {
+      document.querySelectorAll('[data-eval-tab]').forEach(btn => {
+        const active = btn.getAttribute('data-eval-tab') === activeKey;
+        btn.classList.toggle('bg-ink',          active);
+        btn.classList.toggle('text-canvas',     active);
+        btn.classList.toggle('dark:bg-d-ink',   active);
+        btn.classList.toggle('dark:text-d-canvas', active);
+        btn.classList.toggle('text-muted',         !active);
+        btn.classList.toggle('dark:text-d-muted',  !active);
+        btn.classList.toggle('hover:text-ink',         !active);
+        btn.classList.toggle('dark:hover:text-d-ink',  !active);
+      });
+    }
+
+    let currentEvalTab = 'original';
+    const evalGrid = document.getElementById('evalChartGrid');
+
+    function setEvalTab(key, animate = true) {
+      currentEvalTab = key;
+      styleEvalTabs(key);
+      if (!evalGrid) return;
+      evalGrid.classList.remove('in-view');
+      renderEvalChart(evalGrid, key);
+      if (animate) {
+        // Force reflow so the bars start at 0 width before transitioning
+        void evalGrid.offsetWidth;
+        requestAnimationFrame(() => evalGrid.classList.add('in-view'));
+      }
+    }
+
+    document.querySelectorAll('[data-eval-tab]').forEach(btn => {
+      btn.addEventListener('click', () => setEvalTab(btn.getAttribute('data-eval-tab')));
+    });
+
+    if (evalGrid) {
+      // Initial render (no animation yet — IntersectionObserver triggers it on scroll-in)
+      setEvalTab('original', false);
+      const io = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      io.observe(evalGrid);
+    }
+
+    // ── Task-graph SVG animation (nodes fade in, lines draw in) ─────
+    const tgFig = document.getElementById('taskGraphFig');
+    if (tgFig) {
+      const tgIo = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.2 });
+      tgIo.observe(tgFig);
+    }
+
+    // ── Real–Sim pipeline animation ─────────────────────────────────
+    const rsPipeline = document.getElementById('realSimPipeline');
+    if (rsPipeline) {
+      const rsIo = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      rsIo.observe(rsPipeline);
+    }
+
+    // ── Architecture diagram animation ──────────────────────────────
+    const archDiag = document.getElementById('archDiagram');
+    if (archDiag) {
+      const adIo = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1 });
+      adIo.observe(archDiag);
+    }
+
+    // ── Task video carousel scroll buttons ──────────────────────────
+    const taskScroller = document.getElementById('taskScroller');
+    if (taskScroller) {
+      document.querySelectorAll('[data-task-scroll]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const dir = parseInt(btn.getAttribute('data-task-scroll'), 10);
+          const card = taskScroller.querySelector('figure');
+          const step = card ? (card.getBoundingClientRect().width + 12) : 280;
+          taskScroller.scrollBy({ left: dir * step, behavior: 'smooth' });
+        });
+      });
+    }
+  </script>
 </body>
 </html>
