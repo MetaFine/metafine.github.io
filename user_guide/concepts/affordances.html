@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>Affordances · MetaFine User Guide</title>
+  <meta name="description" content="Affordances — MetaFine user guide." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -146,12 +146,12 @@
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
         <div class="nav-section">Core Concepts</div>
         <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
         <a href="../concepts/skills.html" class="nav-item">Atomic skills</a>
-        <a href="../concepts/affordances.html" class="nav-item">Affordances</a>
+        <a href="../concepts/affordances.html" class="nav-item is-active">Affordances</a>
         <a href="../concepts/task_graphs.html" class="nav-item">Task graphs</a>
         <a href="../concepts/predicates.html" class="nav-item">Predicate DSL</a>
         <div class="nav-section">Evaluation</div>
@@ -188,87 +188,96 @@
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
+          User Guide · Core Concepts · Affordances
         </div>
 
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
+          Affordances
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
+          MetaFine uses a closed-set vocabulary of 11 affordances as the lingua franca between skills and assets. Compatibility is a lookup, not a heuristic — and that is what makes the platform composable at scale.
         </p>
 
         <div class="prose-doc mt-6">
 
-          <h2 id="requirements">System requirements</h2>
+          <h2 id="closed-set">Why closed-set</h2>
+          <p>Free-form affordance descriptors (<em>"can be twisted"</em>, <em>"liftable-via-knob"</em>) feel flexible but make composition impossible: every new skill must learn every prior label's idiosyncrasies. MetaFine takes the opposite stance — eleven affordances, fixed at the platform layer, expressive enough to cover fine-grained articulated manipulation, and small enough that the validator can reason about them.</p>
+          <p>If a new operation can't be expressed in the existing set, we add a new affordance at the platform level — every skill and every asset opts in explicitly. Twelve affordances tomorrow is fine; <em>twelve thousand</em> never.</p>
+
+          <h2 id="vocabulary">The 11 affordances</h2>
           <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
+            <thead><tr><th>Affordance</th><th>Meaning</th><th>Typical part</th></tr></thead>
             <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
+              <tr><td><code>graspable</code></td><td>The gripper can close on this part stably.</td><td>handle, knob, body</td></tr>
+              <tr><td><code>rotatable</code></td><td>Rotates about a revolute joint when engaged.</td><td>knob, lever, valve</td></tr>
+              <tr><td><code>slidable</code></td><td>Translates along a prismatic joint.</td><td>drawer face, sliding lid</td></tr>
+              <tr><td><code>pressable</code></td><td>Yields under perpendicular force; no grasp needed.</td><td>button, key, pad</td></tr>
+              <tr><td><code>openable</code></td><td>Hinged; rotates open to expose interior.</td><td>door, panel, flap</td></tr>
+              <tr><td><code>liftable</code></td><td>Can be lifted away after engagement.</td><td>cap, lid, removable cover</td></tr>
+              <tr><td><code>insertable</code></td><td>Can be inserted into a mating socket.</td><td>plug, peg, key</td></tr>
+              <tr><td><code>flippable</code></td><td>Two stable states (on/off).</td><td>switch, toggle</td></tr>
+              <tr><td><code>placeable</code></td><td>Has a flat / well-defined seat surface.</td><td>cup base, block face</td></tr>
+              <tr><td><code>stackable</code></td><td>Can receive another object on top.</td><td>cube top, plate, lid</td></tr>
+              <tr><td><code>drawable</code></td><td>Slides outward from a containing housing.</td><td>drawer, sliding tray</td></tr>
             </tbody>
           </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
 
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
+          <h2 id="contract">The contract</h2>
+          <ul>
+            <li>An <strong>asset</strong> declares which of its parts offer which affordances (in <code>capabilities.json</code>).</li>
+            <li>A <strong>skill</strong> declares which affordances it requires of its target part (in its <code>@register_skill</code> decorator).</li>
+            <li>The <strong>task-graph validator</strong> intersects the two: it confirms each stage's target part offers all the affordances the stage's skill requires.</li>
+          </ul>
+          <p>A skill–asset mismatch never reaches the simulator; it fails at graph-validation time with a precise error pointing at the offending stage.</p>
 
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
+          <h2 id="declare">Declared by assets</h2>
+          <p>Per-asset declaration lives in <code>assets/&lt;asset_id&gt;/capabilities.json</code>:</p>
+          <pre class="code-block">{
+  <span class="c-key">"parts"</span>: {
+    <span class="c-key">"cap"</span>:    [<span class="c-str">"graspable"</span>, <span class="c-str">"rotatable"</span>, <span class="c-str">"liftable"</span>],
+    <span class="c-key">"body"</span>:   [<span class="c-str">"graspable"</span>, <span class="c-str">"placeable"</span>],
+    <span class="c-key">"handle"</span>: [<span class="c-str">"graspable"</span>, <span class="c-str">"rotatable"</span>]
+  },
+  <span class="c-key">"aliases"</span>: { <span class="c-key">"lid"</span>: <span class="c-str">"cap"</span> }
+}</pre>
+          <p>Aliases let YAML authors write <code>part: lid</code> and have the resolver map it to the canonical part name. See <a href="../assets/capabilities.html">capabilities.json reference</a> for the full schema.</p>
 
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
+          <h2 id="require">Required by skills</h2>
+          <p>Each skill's requirements live next to its registration:</p>
+          <pre class="code-block">@register_skill(phase=<span class="c-str">"interaction"</span>, requires=(<span class="c-str">"graspable"</span>,))
+<span class="c-key">def</span> grasp_part(env, target): ...
 
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
+@register_skill(phase=<span class="c-str">"continuation"</span>, requires=(<span class="c-str">"rotatable"</span>,))
+<span class="c-key">def</span> pure_rotate(env, target, *, angle_deg=90): ...</pre>
 
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
+          <h2 id="lookup">Compatibility lookup</h2>
+          <p>Given an asset, MetaFine can enumerate applicable skills without any heuristics:</p>
+          <pre class="code-block"><span class="c-key">from</span> core.skill_registry <span class="c-key">import</span> applicable_skills
+<span class="c-key">from</span> utils.assets <span class="c-key">import</span> load_capabilities
 
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
-
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
+caps = load_capabilities(<span class="c-str">"100221"</span>)         <span class="c-comment"># { "cap": [...], "body": [...] }</span>
+<span class="c-key">for</span> part, affs <span class="c-key">in</span> caps[<span class="c-str">"parts"</span>].items():
+    <span class="c-key">print</span>(part, applicable_skills(affs))
+<span class="c-comment"># cap     ('grasp_part', 'pure_rotate', 'lift_lid', 'pure_lift', 'release_gripper', ...)</span>
+<span class="c-comment"># body    ('grasp_part', 'place', 'release_gripper', ...)</span></pre>
+          <p>This same function backs the task-graph validator and the AI-planner integration. The set is finite and computable, which is what makes evaluation comparable across heterogeneous assets.</p>
 
         </div>
 
         <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
+          <a href="../concepts/skills.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Atomic skills</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
+          </a><a href="../concepts/task_graphs.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Task graphs</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,12 +287,12 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#closed-set" class="toc-item">Why closed-set</a>
+          <a href="#vocabulary" class="toc-item">The 11 affordances</a>
+          <a href="#contract" class="toc-item">The contract</a>
+          <a href="#declare" class="toc-item">Declared by assets</a>
+          <a href="#require" class="toc-item">Required by skills</a>
+          <a href="#lookup" class="toc-item">Compatibility lookup</a>
         </nav>
       </aside>
 

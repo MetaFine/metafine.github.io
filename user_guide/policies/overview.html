@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>Policies overview · MetaFine User Guide</title>
+  <meta name="description" content="Supported VLA backbones and the 3-function adapter pattern they all implement." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -17,25 +17,10 @@
       darkMode: 'class',
       theme: {
         extend: {
-          fontFamily: {
-            sans: ['Geist', 'Arial', 'system-ui', 'sans-serif'],
-            mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-          },
-          colors: {
-            ink:'#171717', body:'#4d4d4d', muted:'#666666', placeholder:'#808080',
-            hairline:'#ebebeb', canvas:'#ffffff', soft:'#fafafa',
-            link:'#0072f5', badgebg:'#ebf5ff', badgetx:'#0068d6',
-            understand:'#0a72ef', perceive:'#de1d8d', behave:'#ff5b4f',
-            'd-canvas':'#0a0a0a','d-surface':'#141414','d-ink':'#ededed',
-            'd-body':'#a1a1a1','d-muted':'#737373',
-          },
+          fontFamily: { sans: ['Geist', 'Arial', 'system-ui', 'sans-serif'], mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'] },
+          colors: { ink:'#171717', body:'#4d4d4d', muted:'#666666', placeholder:'#808080', hairline:'#ebebeb', canvas:'#ffffff', soft:'#fafafa', link:'#0072f5', badgebg:'#ebf5ff', badgetx:'#0068d6', understand:'#0a72ef', perceive:'#de1d8d', behave:'#ff5b4f', 'd-canvas':'#0a0a0a','d-surface':'#141414','d-ink':'#ededed','d-body':'#a1a1a1','d-muted':'#737373' },
           letterSpacing: { hero:'-0.05em', h2:'-0.04em', h3:'-0.04em', label:'-0.02em', none:'0' },
-          boxShadow: {
-            hairline:'0 0 0 1px rgba(0,0,0,0.08)',
-            'hairline-dark':'0 0 0 1px rgba(255,255,255,0.10)',
-            card:'0 0 0 1px rgba(0,0,0,0.08), 0 2px 2px rgba(0,0,0,0.04), 0 8px 8px -8px rgba(0,0,0,0.04)',
-            'card-dark':'0 0 0 1px rgba(255,255,255,0.10), 0 2px 2px rgba(0,0,0,0.4), 0 8px 8px -8px rgba(0,0,0,0.5)',
-          },
+          boxShadow: { hairline:'0 0 0 1px rgba(0,0,0,0.08)', 'hairline-dark':'0 0 0 1px rgba(255,255,255,0.10)', card:'0 0 0 1px rgba(0,0,0,0.08), 0 2px 2px rgba(0,0,0,0.04), 0 8px 8px -8px rgba(0,0,0,0.04)', 'card-dark':'0 0 0 1px rgba(255,255,255,0.10), 0 2px 2px rgba(0,0,0,0.4), 0 8px 8px -8px rgba(0,0,0,0.5)' },
           maxWidth: { container:'1280px', prose:'720px' },
           borderRadius: { pill:'9999px' },
         }
@@ -54,7 +39,6 @@
     .dark .hairline-b { box-shadow: inset 0 -1px 0 rgba(255,255,255,0.10); }
     .hairline-t { box-shadow: inset 0 1px 0 rgba(0,0,0,0.08); }
     .dark .hairline-t { box-shadow: inset 0 1px 0 rgba(255,255,255,0.10); }
-
     .prose-doc { font-size: 16px; line-height: 1.65; color: #4d4d4d; }
     .dark .prose-doc { color: #a1a1a1; }
     .prose-doc h2 { font-size: 28px; font-weight: 600; line-height: 1.25; letter-spacing: -0.02em; color: #171717; margin-top: 56px; margin-bottom: 16px; scroll-margin-top: 96px; }
@@ -71,22 +55,12 @@
     .prose-doc ul { margin-bottom: 16px; padding-left: 20px; list-style: disc; }
     .prose-doc ul li { margin-bottom: 6px; }
     .prose-doc ul li::marker { color: #a8a8aa; }
-    .prose-doc ol { margin-bottom: 16px; padding-left: 24px; list-style: decimal; }
-    .prose-doc ol li { margin-bottom: 6px; }
-    .prose-doc table { width: 100%; font-size: 14px; line-height: 1.5; margin-bottom: 16px; border-collapse: collapse; }
-    .prose-doc th { text-align: left; font-weight: 600; color: #171717; padding: 8px 12px; border-bottom: 1px solid #ebebeb; }
-    .dark .prose-doc th { color: #ededed; border-color: rgba(255,255,255,0.10); }
-    .prose-doc td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-    .dark .prose-doc td { border-color: rgba(255,255,255,0.06); }
-
-    .code-block { background: #0a0a0a; color: #ededed; border-radius: 8px; padding: 14px 16px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; margin: 16px 0; }
+    .code-block { background: #0a0a0a; color: #ededed; border-radius: 8px; padding: 14px 16px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; }
     .dark .code-block { background: #141414; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); }
     .code-block .c-comment { color: #888; }
     .code-block .c-flag    { color: #7cebcb; }
     .code-block .c-str     { color: #ffd866; }
-    .code-block .c-key     { color: #de1d8d; }
     .code-block .c-prompt  { color: #888; user-select: none; }
-
     .nav-item { display: flex; align-items: center; padding: 6px 12px; font-size: 14px; color: #5a5a5c; border-radius: 6px; }
     .nav-item:hover { color: #171717; background: #fafafa; }
     .dark .nav-item { color: #a1a1a1; }
@@ -95,29 +69,28 @@
     .dark .nav-item.is-active { color: #ededed; background: #1c1c1c; }
     .nav-section { font-family: 'Geist', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #888888; padding: 16px 12px 6px; }
     .dark .nav-section { color: #737373; }
-
     .toc-item { display: block; padding: 4px 0; font-size: 13.5px; color: #888888; line-height: 1.5; }
     .toc-item:hover { color: #171717; }
     .dark .toc-item { color: #737373; }
     .dark .toc-item:hover { color: #ededed; }
     .toc-item.is-active { color: #171717; font-weight: 500; }
     .dark .toc-item.is-active { color: #ededed; }
-
     .sticky-side { position: sticky; top: 64px; max-height: calc(100vh - 64px); overflow-y: auto; }
     .card-link { transition: transform .15s ease, box-shadow .15s ease; }
     .card-link:hover { transform: translateY(-2px); }
+    .ref-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0 24px; }
+    .ref-table th, .ref-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #ebebeb; vertical-align: top; }
+    .dark .ref-table th, .dark .ref-table td { border-bottom-color: rgba(255,255,255,0.08); }
+    .ref-table th { font-weight: 600; color: #171717; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .dark .ref-table th { color: #ededed; }
+    .ref-table code { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12.5px; background: #f7f7f7; color: #1c1c1e; padding: 1px 5px; border-radius: 4px; border: 1px solid #ebebeb; }
+    .dark .ref-table code { background: #1c1c1c; color: #ededed; border-color: rgba(255,255,255,0.10); }
   </style>
 
-  <script>
-    (function() {
-      var t = localStorage.getItem('theme');
-      if (t === 'dark') document.documentElement.classList.add('dark');
-    })();
-  </script>
+  <script>(function() { var t = localStorage.getItem('theme'); if (t === 'dark') document.documentElement.classList.add('dark'); })();</script>
 </head>
 
 <body class="bg-canvas dark:bg-d-canvas text-ink dark:text-d-ink">
-
   <header class="sticky top-0 z-40 bg-canvas/85 dark:bg-d-canvas/85 backdrop-blur hairline-b">
     <div class="max-w-container mx-auto px-6 h-14 flex items-center justify-between">
       <div class="flex items-center gap-8">
@@ -125,14 +98,13 @@
         <nav class="hidden md:flex items-center gap-6 text-[13.5px] text-muted dark:text-d-muted">
           <a href="../../index.html" class="hover:text-ink dark:hover:text-d-ink">Home</a>
           <a href="../index.html" class="text-ink dark:text-d-ink font-medium">User Guide</a>
+          <a href="../audit/index.html" class="hover:text-ink dark:hover:text-d-ink">Asset Audit</a>
           <a href="https://github.com/aatt523/FGManip" class="hover:text-ink dark:hover:text-d-ink">GitHub</a>
         </nav>
       </div>
       <div class="flex items-center gap-2">
-        <input type="search" placeholder="Search docs"
-               class="hidden md:block bg-soft dark:bg-d-surface border border-hairline dark:border-white/10 rounded-md text-[13px] px-3 py-1.5 w-56 placeholder:text-placeholder dark:placeholder:text-d-muted focus:outline-none focus:ring-1 focus:ring-ink dark:focus:ring-d-ink" />
-        <button id="theme-toggle" aria-label="Toggle theme"
-                class="h-8 w-8 inline-flex items-center justify-center rounded-md border border-hairline dark:border-white/10 hover:bg-soft dark:hover:bg-d-surface">
+        <input type="search" placeholder="Search docs" class="hidden md:block bg-soft dark:bg-d-surface border border-hairline dark:border-white/10 rounded-md text-[13px] px-3 py-1.5 w-56 placeholder:text-placeholder dark:placeholder:text-d-muted focus:outline-none focus:ring-1 focus:ring-ink dark:focus:ring-d-ink" />
+        <button id="theme-toggle" aria-label="Toggle theme" class="h-8 w-8 inline-flex items-center justify-center rounded-md border border-hairline dark:border-white/10 hover:bg-soft dark:hover:bg-d-surface">
           <svg class="h-4 w-4 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
           <svg class="h-4 w-4 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         </button>
@@ -142,11 +114,10 @@
 
   <div class="max-w-container mx-auto px-6">
     <div class="grid grid-cols-12 gap-6">
-
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
         <div class="nav-section">Core Concepts</div>
         <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
@@ -162,17 +133,17 @@
         <a href="../evaluation/results_schema.html" class="nav-item">Results schema</a>
         <div class="nav-section">Data Pipelines</div>
         <a href="../data/recording.html" class="nav-item">Recording</a>
-        <a href="../data/replay.html" class="nav-item">Replay & merge</a>
+        <a href="../data/replay.html" class="nav-item">Replay &amp; merge</a>
         <a href="../data/lerobot.html" class="nav-item">LeRobot export</a>
         <a href="../data/rlds.html" class="nav-item">RLDS export</a>
         <div class="nav-section">Policies</div>
-        <a href="../policies/overview.html" class="nav-item">Overview</a>
-        <a href="../policies/act.html" class="nav-item">ACT</a>
-        <a href="../policies/dp3.html" class="nav-item">DP3</a>
-        <a href="../policies/openvla.html" class="nav-item">OpenVLA / OFT</a>
-        <a href="../policies/pi0.html" class="nav-item">π0 / π0.5</a>
-        <a href="../policies/starvla.html" class="nav-item">StarVLA</a>
-        <a href="../policies/adding.html" class="nav-item">Adding a policy</a>
+        <a href="overview.html" class="nav-item is-active">Overview</a>
+        <a href="act.html" class="nav-item">ACT</a>
+        <a href="dp3.html" class="nav-item">DP3</a>
+        <a href="openvla.html" class="nav-item">OpenVLA / OFT</a>
+        <a href="pi0.html" class="nav-item">π0 / π0.5</a>
+        <a href="starvla.html" class="nav-item">StarVLA</a>
+        <a href="adding.html" class="nav-item">Adding a policy</a>
         <div class="nav-section">Asset Library</div>
         <a href="../assets/overview.html" class="nav-item">Asset overview</a>
         <a href="../assets/adding.html" class="nav-item">Onboarding a URDF</a>
@@ -180,6 +151,7 @@
         <div class="nav-section">Built-in Agents</div>
         <a href="../agents/help.html" class="nav-item">metafine_help</a>
         <a href="../agents/add.html" class="nav-item">metafine_add</a>
+
         <div class="nav-section">Reference</div>
         <a href="../reference/cli.html" class="nav-item">CLI reference</a>
         <a href="../reference/api.html" class="nav-item">Python API</a>
@@ -187,88 +159,80 @@
       </aside>
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
-        <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
-        </div>
+        <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">User Guide · Policies · Overview</div>
+        <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">Policies overview</h1>
+        <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">MetaFine ships first-class support for <strong class="text-ink dark:text-d-ink font-medium">seven VLA backbones</strong>. After the recent task-graph refactor, <em>all seven</em> consume the same <code class="font-mono">--task-graph</code> entrypoint and emit the same <code class="font-mono">results.json</code>. Each lives at <code class="font-mono">core/policies/&lt;name&gt;</code>, installed separately via its own <code class="font-mono">pyproject.toml</code>.</p>
 
-        <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
-        </h1>
+        <div class="prose-doc mt-8">
 
-        <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
-        </p>
-
-        <div class="prose-doc mt-6">
-
-          <h2 id="requirements">System requirements</h2>
-          <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
+          <h2 id="supported">Supported backbones</h2>
+          <table class="ref-table">
+            <thead><tr><th>Backbone</th><th>Package path</th><th><code>--task-graph</code></th><th>Page</th></tr></thead>
             <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
+              <tr><td>ACT</td><td><code>core/policies/act</code></td><td>yes</td><td><a href="act.html">ACT</a></td></tr>
+              <tr><td>DP3</td><td><code>core/policies/dp3</code></td><td>yes</td><td><a href="dp3.html">DP3</a></td></tr>
+              <tr><td>OpenVLA</td><td><code>core/policies/openvla</code></td><td>yes</td><td><a href="openvla.html">OpenVLA / OFT</a></td></tr>
+              <tr><td>OpenVLA-OFT</td><td><code>core/policies/openvla_oft</code></td><td>yes</td><td><a href="openvla.html">OpenVLA / OFT</a></td></tr>
+              <tr><td>π0</td><td><code>core/policies/pi0</code></td><td>yes</td><td><a href="pi0.html">π0 / π0.5</a></td></tr>
+              <tr><td>π0.5</td><td><code>core/policies/pi05</code></td><td>yes</td><td><a href="pi0.html">π0 / π0.5</a></td></tr>
+              <tr><td>StarVLA</td><td><code>core/policies/starvla</code></td><td>yes</td><td><a href="starvla.html">StarVLA</a></td></tr>
             </tbody>
           </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
+          <p>Each backbone is vendored as a self-contained subpackage; install only the ones you need:</p>
+          <pre class="code-block my-4"><span class="c-comment"># Base MetaFine</span>
+<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .
 
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
+<span class="c-comment"># A specific policy (and its native deps)</span>
+<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/dp3
+<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla_oft</pre>
 
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
+          <h2 id="adapter">The 3-function adapter pattern</h2>
+          <p>
+            To plug a backbone into MetaFine's record → diagnostic-eval loop, every <code>core/policies/&lt;name&gt;/evaluate.py</code> exposes the same three functions. That's the entire contract — the framework handles env construction, task-graph stepping, DR sweeps, and smoothness logging.
+          </p>
+          <ul>
+            <li><code>load_model(checkpoint_path, device) → model</code> — hydrate weights, return an opaque object the other two functions accept.</li>
+            <li><code>predict(model, observation, instruction) → action</code> — one observation in, one action (or action chunk) out. Called every env step.</li>
+            <li><code>finalize(model)</code> — release GPU memory, close any open files. Called once after the eval loop.</li>
+          </ul>
+          <pre class="code-block my-4"><span class="c-comment"># Minimal sketch — see policies/adding.html for the full walkthrough</span>
+def load_model(checkpoint_path, device):
+    model = MyVLA.from_pretrained(checkpoint_path).to(device)
+    model.eval()
+    return model
 
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
+def predict(model, observation, instruction):
+    with torch.no_grad():
+        return model.act(observation, instruction).cpu().numpy()
 
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
+def finalize(model):
+    del model
+    torch.cuda.empty_cache()</pre>
 
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
-
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
-
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
+          <h2 id="cli">Common CLI</h2>
+          <p>Every policy ships the same evaluation entrypoint, parameterised by checkpoint and task graph:</p>
+          <pre class="code-block my-4"><span class="c-prompt">$</span> python core/policies/&lt;name&gt;/evaluate.py \
+    <span class="c-flag">--task-graph</span> configs/example_grasp_cap.yaml \
+    <span class="c-flag">--checkpoint</span> /path/to/ckpt \
+    <span class="c-flag">--episodes</span> 30 \
+    <span class="c-flag">--dr-sweep</span> standard \
+    <span class="c-flag">--smoothness</span></pre>
+          <p>That single command emits the three-dimensional <a href="../evaluation/results_schema.html"><code>results.json</code></a> regardless of which backbone is loaded.</p>
 
         </div>
 
-        <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
-             class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
+        <nav class="mt-12 pt-6 hairline-t flex items-center justify-between">
+          <a href="../data/rlds.html" class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
-              <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Prev</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">RLDS export</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
-             class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
+          </a>
+          <a href="act.html" class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">ACT</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,15 +242,11 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#supported" class="toc-item">Supported backbones</a>
+          <a href="#adapter" class="toc-item">The 3-function adapter pattern</a>
+          <a href="#cli" class="toc-item">Common CLI</a>
         </nav>
       </aside>
-
     </div>
   </div>
 
@@ -310,7 +270,6 @@
       var on = document.documentElement.classList.toggle('dark');
       localStorage.setItem('theme', on ? 'dark' : 'light');
     });
-
     var tocLinks = document.querySelectorAll('#toc a');
     var ids = Array.from(tocLinks).map(a => a.getAttribute('href').slice(1));
     var headings = ids.map(id => document.getElementById(id)).filter(Boolean);
@@ -318,13 +277,10 @@
       var y = window.scrollY + 120;
       var active = headings[0];
       for (var h of headings) { if (h.offsetTop <= y) active = h; }
-      tocLinks.forEach(a => a.classList.toggle('is-active', a.getAttribute('href') === '#' + (active && active.id)));
+      tocLinks.forEach(a => a.classList.toggle('is-active', a.getAttribute('href') === '#' + active.id));
     }
-    if (headings.length) {
-      document.addEventListener('scroll', syncToc, { passive: true });
-      syncToc();
-    }
+    document.addEventListener('scroll', syncToc, { passive: true });
+    syncToc();
   </script>
-
 </body>
 </html>

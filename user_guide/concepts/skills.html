@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>Atomic skills · MetaFine User Guide</title>
+  <meta name="description" content="Atomic skills — MetaFine user guide." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -146,11 +146,11 @@
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
         <div class="nav-section">Core Concepts</div>
         <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
-        <a href="../concepts/skills.html" class="nav-item">Atomic skills</a>
+        <a href="../concepts/skills.html" class="nav-item is-active">Atomic skills</a>
         <a href="../concepts/affordances.html" class="nav-item">Affordances</a>
         <a href="../concepts/task_graphs.html" class="nav-item">Task graphs</a>
         <a href="../concepts/predicates.html" class="nav-item">Predicate DSL</a>
@@ -188,87 +188,116 @@
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
+          User Guide · Core Concepts · Atomic skills
         </div>
 
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
+          Atomic skills
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
+          MetaFine ships 21 motion-planning primitives, each typed by the affordances it requires and the phase it belongs to. New skills are registered with a single decorator and become composable immediately.
         </p>
 
         <div class="prose-doc mt-6">
 
-          <h2 id="requirements">System requirements</h2>
+          <h2 id="what">What is a skill?</h2>
+          <p>A <strong>skill</strong> is the smallest unit of interaction in MetaFine — a motion-planning solver that achieves one well-defined operation on one well-defined part of an articulated asset, with a clear pre/post contact-state contract. <em>Grasp this handle.</em> <em>Rotate this knob 90°.</em> <em>Slide this drawer 5 cm out.</em> Skills are <em>not</em> learned policies; they are deterministic experts used to generate demonstrations and to define what a task even means.</p>
+          <p>Every skill carries metadata: which affordances it requires of its target part, which phase it belongs to, and default parameters that make it run without arguments.</p>
+
+          <h2 id="phases">The three phases</h2>
+          <p>Skills are classified by what they do to the contact state — this classification determines what composes safely with what.</p>
+          <div class="my-6 grid sm:grid-cols-3 gap-3 not-prose">
+            <div class="rounded-lg border border-hairline dark:border-white/10 p-4 bg-canvas dark:bg-d-surface">
+              <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-understand mb-2">Interaction</div>
+              <div class="text-[14px] leading-[1.55] text-body dark:text-d-body">Engages the object; <em>transitions</em> contact state. Starts a chain.</div>
+              <div class="mt-3 text-[12.5px] font-mono text-muted dark:text-d-muted leading-relaxed">grasp_part · press · flip_switch · lift_lid · insert · place</div>
+            </div>
+            <div class="rounded-lg border border-hairline dark:border-white/10 p-4 bg-canvas dark:bg-d-surface">
+              <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-perceive mb-2">Continuation</div>
+              <div class="text-[14px] leading-[1.55] text-body dark:text-d-body">Operates on an <em>already-engaged</em> part. Safe to chain after interaction.</div>
+              <div class="mt-3 text-[12.5px] font-mono text-muted dark:text-d-muted leading-relaxed">pure_rotate · pure_slide · pure_insert · pure_lift · release_gripper</div>
+            </div>
+            <div class="rounded-lg border border-hairline dark:border-white/10 p-4 bg-canvas dark:bg-d-surface">
+              <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-behave mb-2">Bundle</div>
+              <div class="text-[14px] leading-[1.55] text-body dark:text-d-body">Pre-composed multi-step routines kept atomic for now (until they're split).</div>
+              <div class="mt-3 text-[12.5px] font-mono text-muted dark:text-d-muted leading-relaxed">lid_opening · stand_up · toggle_switch</div>
+            </div>
+          </div>
+          <p>The phase distinction is enforced by the task-graph validator: a continuation skill emits a clear error if the preceding stage left the gripper disengaged.</p>
+
+          <h2 id="catalogue">Skill catalogue</h2>
           <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
+            <thead><tr><th>Skill</th><th>Phase</th><th>Requires (affordance)</th><th>Typical use</th></tr></thead>
             <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
+              <tr><td><code>grasp_part</code></td><td>interaction</td><td>graspable</td><td>Engage a named part with the gripper.</td></tr>
+              <tr><td><code>press</code></td><td>interaction</td><td>pressable</td><td>Press a button / pad without grasping.</td></tr>
+              <tr><td><code>flip_switch</code></td><td>interaction</td><td>flippable</td><td>Toggle a switch (single binary motion).</td></tr>
+              <tr><td><code>lift_lid</code></td><td>interaction</td><td>liftable</td><td>Grasp + lift a removable lid.</td></tr>
+              <tr><td><code>insert</code></td><td>interaction</td><td>insertable</td><td>Align + insert a part into a socket / hole.</td></tr>
+              <tr><td><code>place</code></td><td>interaction</td><td>placeable</td><td>Set a held object onto a surface.</td></tr>
+              <tr><td><code>stack</code></td><td>interaction</td><td>stackable</td><td>Place onto another object.</td></tr>
+              <tr><td><code>pure_rotate</code></td><td>continuation</td><td>rotatable</td><td>Rotate the already-grasped part about its joint axis.</td></tr>
+              <tr><td><code>pure_slide</code></td><td>continuation</td><td>slidable</td><td>Translate the already-grasped part along its prismatic joint.</td></tr>
+              <tr><td><code>pure_lift</code></td><td>continuation</td><td>liftable</td><td>Raise the held object by N cm.</td></tr>
+              <tr><td><code>pure_insert</code></td><td>continuation</td><td>insertable</td><td>Continue insertion from a pre-aligned pose.</td></tr>
+              <tr><td><code>release_gripper</code></td><td>continuation</td><td>—</td><td>Open the gripper; terminate the engagement.</td></tr>
+              <tr><td><code>draw_part</code></td><td>interaction</td><td>drawable</td><td>Pull a drawer / sliding part.</td></tr>
+              <tr><td><code>open_part</code></td><td>interaction</td><td>openable</td><td>Open a door / hinged panel.</td></tr>
+              <tr><td><code>lid_opening</code></td><td>bundle</td><td>graspable + liftable</td><td>Bundle: grasp lid then lift to clearance.</td></tr>
+              <tr><td><code>stand_up</code></td><td>bundle</td><td>graspable + liftable</td><td>Bundle: tip a lying object upright.</td></tr>
+              <tr><td><code>toggle_switch</code></td><td>bundle</td><td>flippable</td><td>Bundle: approach + flip + retract.</td></tr>
             </tbody>
           </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
+          <p class="text-[13px] text-muted dark:text-d-muted">(A handful of internal variants are omitted; consult <code>SKILL_REGISTRY</code> for the live list.)</p>
 
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
+          <h2 id="registry">The skill registry</h2>
+          <p><code>core.skill_registry.SKILL_REGISTRY</code> is the single source of truth that maps skill name → <code>SkillSpec</code> (the solver callable, the required affordances, the phase, default parameters). At import time every skill module registers itself; downstream code looks skills up rather than hardcoding strings.</p>
+          <pre class="code-block"><span class="c-key">from</span> core.skill_registry <span class="c-key">import</span> SKILL_REGISTRY
 
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
+spec = SKILL_REGISTRY[<span class="c-str">"pure_rotate"</span>]
+<span class="c-key">print</span>(spec.phase, spec.requires)
+<span class="c-comment"># → 'continuation' ('rotatable',)</span></pre>
 
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
+          <h2 id="decorator">@register_skill</h2>
+          <p>A new skill is a decorator + a function. The decorator declares its phase + affordance contract:</p>
+          <pre class="code-block"><span class="c-key">from</span> core.skill_registry <span class="c-key">import</span> register_skill
 
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
+@register_skill(
+    phase=<span class="c-str">"interaction"</span>,
+    requires=(<span class="c-str">"graspable"</span>, <span class="c-str">"pressable"</span>),
+    defaults={<span class="c-str">"force_n"</span>: 8.0},
+)
+<span class="c-key">def</span> grasp_and_press(env, target, *, force_n=8.0):
+    <span class="c-comment">"""Engage the part and apply a brief press."""</span>
+    grasp_part(env, target)
+    press(env, target, force_n=force_n)
+    <span class="c-key">return</span> env.last_step_info</pre>
+          <p>Once imported, the new skill is automatically eligible in task graphs whose target parts declare both <code>graspable</code> and <code>pressable</code>.</p>
 
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
-
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
-
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
+          <h2 id="composing">Composing skills</h2>
+          <p>Two ways to compose:</p>
+          <ul>
+            <li><strong>YAML task graphs</strong> — declarative; preferred for evaluation. See <a href="task_graphs.html">Task graphs</a>.</li>
+            <li><strong>Python callbacks</strong> — for programmatic curricula or learned planners. Call <code>run_task_graph(env, graph)</code> directly from your script.</li>
+          </ul>
+          <p>Both paths share the same validator, so an invalid chain (continuation after disengagement, missing affordance on the target) fails the same way regardless of how it was constructed.</p>
 
         </div>
 
         <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
+          <a href="../concepts/architecture.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Architecture</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
+          </a><a href="../concepts/affordances.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Affordances</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,12 +307,12 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#what" class="toc-item">What is a skill?</a>
+          <a href="#phases" class="toc-item">The three phases</a>
+          <a href="#catalogue" class="toc-item">Skill catalogue</a>
+          <a href="#registry" class="toc-item">The skill registry</a>
+          <a href="#decorator" class="toc-item">@register_skill</a>
+          <a href="#composing" class="toc-item">Composing skills</a>
         </nav>
       </aside>
 

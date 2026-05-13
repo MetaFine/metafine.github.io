@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>Real-sim hybrid evaluation (PPI) · MetaFine User Guide</title>
+  <meta name="description" content="Real-sim hybrid evaluation (PPI) — MetaFine user guide." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -146,7 +146,7 @@
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
         <div class="nav-section">Core Concepts</div>
         <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
@@ -158,7 +158,7 @@
         <a href="../evaluation/understanding.html" class="nav-item">Understanding</a>
         <a href="../evaluation/perception.html" class="nav-item">Perception</a>
         <a href="../evaluation/behavior.html" class="nav-item">Behavior</a>
-        <a href="../evaluation/hybrid.html" class="nav-item">Real-sim hybrid (PPI)</a>
+        <a href="../evaluation/hybrid.html" class="nav-item is-active">Real-sim hybrid (PPI)</a>
         <a href="../evaluation/results_schema.html" class="nav-item">Results schema</a>
         <div class="nav-section">Data Pipelines</div>
         <a href="../data/recording.html" class="nav-item">Recording</a>
@@ -188,87 +188,111 @@
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
+          User Guide · Evaluation · Real-sim hybrid (PPI)
         </div>
 
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
+          Real-sim hybrid evaluation (PPI)
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
+          PPI — Phone-Pipeline-Import — turns any real-world articulated object into a part-aware MetaFine asset, so the same diagnostic protocol runs on both sides. A hosted online evaluation platform is coming soon.
         </p>
 
         <div class="prose-doc mt-6">
 
-          <h2 id="requirements">System requirements</h2>
-          <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
-            <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
-            </tbody>
-          </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
+          <h2 id="why">Why hybrid?</h2>
+          <p>Pure simulation is fast and reproducible but never quite real; pure real-world evaluation is faithful but doesn't scale to dozens of policies × dozens of objects × dozens of perturbation conditions. The hybrid path puts both sides on the same task graph with the same predicates and the same diagnostic axes — the only thing that changes is whether the rollout happens in SAPIEN or on the bench.</p>
+          <p>PPI is the on-ramp: it takes a phone scan of a real object and produces a MetaFine asset (URDF + meshes + <code>capabilities.json</code>) that is indistinguishable from a PartNet-Mobility asset, so all the existing skills and task graphs <em>just work</em>.</p>
 
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
+          <h2 id="pipeline">The four steps</h2>
+          <div class="my-6 grid sm:grid-cols-4 gap-3 not-prose">
+            <div class="rounded-lg border border-hairline dark:border-white/10 p-4 bg-canvas dark:bg-d-surface">
+              <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-2">01</div>
+              <div class="text-[14px] font-semibold text-ink dark:text-d-ink mb-1">Phone scan</div>
+              <div class="text-[13px] leading-[1.5] text-body dark:text-d-body">Capture with a LiDAR phone.</div>
+            </div>
+            <div class="rounded-lg border border-hairline dark:border-white/10 p-4 bg-canvas dark:bg-d-surface">
+              <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-2">02</div>
+              <div class="text-[14px] font-semibold text-ink dark:text-d-ink mb-1">Process</div>
+              <div class="text-[13px] leading-[1.5] text-body dark:text-d-body">Reconstruct, segment, derive affordances.</div>
+            </div>
+            <div class="rounded-lg border border-hairline dark:border-white/10 p-4 bg-canvas dark:bg-d-surface">
+              <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-2">03</div>
+              <div class="text-[14px] font-semibold text-ink dark:text-d-ink mb-1">Import</div>
+              <div class="text-[13px] leading-[1.5] text-body dark:text-d-body">Drop into the asset library.</div>
+            </div>
+            <div class="rounded-lg border border-hairline dark:border-white/10 p-4 bg-canvas dark:bg-d-surface">
+              <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-2">04</div>
+              <div class="text-[14px] font-semibold text-ink dark:text-d-ink mb-1">Reproduce</div>
+              <div class="text-[13px] leading-[1.5] text-body dark:text-d-body">Same diagnostic eval, sim + real.</div>
+            </div>
+          </div>
 
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
+          <h2 id="scan">01 · Phone scan</h2>
+          <p>Any LiDAR-equipped phone (iPhone Pro / Pro Max from 12 onwards, Pixel 8 Pro+, plus most flagship Android phones with depth sensors) captures a multi-view scan in 30–60 seconds. The scanner records:</p>
+          <ul>
+            <li>Dense point cloud + textured mesh of the object;</li>
+            <li>Per-view RGB + intrinsics;</li>
+            <li>A short manipulation video showing how the moving parts articulate.</li>
+          </ul>
+          <p>The articulation video is the key signal — it tells the next stage which sub-meshes belong to which kinematic part.</p>
 
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
+          <h2 id="process">02 · Process</h2>
+          <p>The processing pipeline takes the raw scan and emits a clean MetaFine asset:</p>
+          <ol>
+            <li><strong>Reconstruct.</strong> Refine the mesh; estimate the rest pose; align to a canonical axis.</li>
+            <li><strong>Segment parts.</strong> Use the articulation video to split the mesh into rigid parts; estimate per-part joint axes and limits from the motion observed.</li>
+            <li><strong>Derive affordances.</strong> Run <code>utils.derive_capabilities</code> over the segmented URDF — joint type + a synonym table propose an initial <code>capabilities.json</code>.</li>
+            <li><strong>Human QA.</strong> A short interactive review (<code>utils.review_capabilities</code>) lets you confirm / toggle / walk through the proposed affordances.</li>
+          </ol>
+          <p>The output is a directory laid out exactly like an existing asset.</p>
 
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
+          <h2 id="import">03 · Import</h2>
+          <p>Move the processed directory into the asset library:</p>
+          <pre class="code-block"><span class="c-prompt">$</span> mv ~/scans/my_jar  assets/my_jar/
+<span class="c-comment"># The directory contains: urdf.xml  meshes/  capabilities.json  model_data.json</span></pre>
+          <p>No further registration is needed — <code>SKILL_REGISTRY</code> lookups consult <code>capabilities.json</code> at runtime, so the new asset is immediately eligible for every skill whose affordance contract it satisfies.</p>
 
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
+          <h2 id="reproduce">04 · Reproduce</h2>
+          <p>Run an existing task graph against the new asset; the three diagnostic dimensions are computed exactly as before:</p>
+          <pre class="code-block"><span class="c-prompt">$</span> python core/policies/pi05/evaluate.py \
+    <span class="c-flag">--task-graph</span> configs/grasp_and_lift_cap.yaml \
+    <span class="c-flag">--asset-override</span> my_jar \
+    <span class="c-flag">--checkpoint</span> /path/to/ckpt \
+    <span class="c-flag">--episodes</span> 30</pre>
+          <p>For matched real-world evaluation, replay the same task graph on the physical object using your real-robot stack. Submit both <code>results.json</code> files to the hybrid comparison report to inspect sim-to-real gap on each diagnostic axis.</p>
 
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
+          <h2 id="platform">Coming soon: the unified evaluation platform</h2>
+          <div class="my-6 rounded-lg p-5 bg-gradient-to-br from-understand/[0.06] via-perceive/[0.04] to-behave/[0.06] border border-hairline dark:border-white/10 not-prose">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="inline-flex items-center gap-1 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink dark:text-d-ink bg-canvas dark:bg-d-canvas border border-hairline dark:border-white/10 rounded-full px-2 py-0.5">
+                <span class="h-1.5 w-1.5 rounded-full bg-behave"></span> Coming soon
+              </span>
+              <span class="font-mono text-[11px] uppercase tracking-wider text-muted dark:text-d-muted">unified evaluation platform</span>
+            </div>
+            <div class="text-[16px] font-semibold tracking-h3 text-ink dark:text-d-ink mb-1">Scan, upload, get diagnosed — without the local pipeline.</div>
+            <div class="text-[14px] leading-[1.55] text-body dark:text-d-body">A hosted MetaFine instance will run the full PPI pipeline + diagnostic evaluation in the cloud. Submit a phone scan and your policy checkpoint; receive a complete <code class="font-mono text-[12.5px] bg-canvas dark:bg-d-canvas px-1 rounded border border-hairline dark:border-white/10">results.json</code> against the public leaderboard. The platform consolidates real + sim evaluation under one schema, so cross-policy and cross-paper comparisons stay apples-to-apples.</div>
+          </div>
 
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
+          <h2 id="waitlist">Waitlist</h2>
+          <p>The hosted platform is in private alpha. To be notified when the public submission portal opens, watch the project repo on <a href="https://github.com/aatt523/FGManip">GitHub</a> or follow the project home page for release announcements.</p>
 
         </div>
 
         <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
+          <a href="../evaluation/behavior.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Behavior</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
+          </a><a href="../evaluation/results_schema.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Results schema</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,12 +302,14 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#why" class="toc-item">Why hybrid?</a>
+          <a href="#pipeline" class="toc-item">The four steps</a>
+          <a href="#scan" class="toc-item">01 · Phone scan</a>
+          <a href="#process" class="toc-item">02 · Process</a>
+          <a href="#import" class="toc-item">03 · Import</a>
+          <a href="#reproduce" class="toc-item">04 · Reproduce</a>
+          <a href="#platform" class="toc-item">Coming soon: unified platform</a>
+          <a href="#waitlist" class="toc-item">Waitlist</a>
         </nav>
       </aside>
 

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>Perception · MetaFine User Guide</title>
+  <meta name="description" content="Perception — MetaFine user guide." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -146,7 +146,7 @@
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
         <div class="nav-section">Core Concepts</div>
         <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
@@ -156,7 +156,7 @@
         <a href="../concepts/predicates.html" class="nav-item">Predicate DSL</a>
         <div class="nav-section">Evaluation</div>
         <a href="../evaluation/understanding.html" class="nav-item">Understanding</a>
-        <a href="../evaluation/perception.html" class="nav-item">Perception</a>
+        <a href="../evaluation/perception.html" class="nav-item is-active">Perception</a>
         <a href="../evaluation/behavior.html" class="nav-item">Behavior</a>
         <a href="../evaluation/hybrid.html" class="nav-item">Real-sim hybrid (PPI)</a>
         <a href="../evaluation/results_schema.html" class="nav-item">Results schema</a>
@@ -188,87 +188,93 @@
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
+          User Guide · Evaluation · Perception
         </div>
 
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
+          Perception
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
+          The Perception axis answers “did the policy correctly process its inputs under variation?” via domain-randomisation sweeps along lighting, viewpoint, and rotation — each summarised by a normalised AUSC (area-under-success-curve) score from 0 to 1.
         </p>
 
         <div class="prose-doc mt-6">
 
-          <h2 id="requirements">System requirements</h2>
+          <h2 id="why">Why DR sweeps?</h2>
+          <p>A policy can score 100% on the same lighting / camera / rotation that produced its training distribution while collapsing the moment a window opens or a camera shifts. The headline number flatters the brittleness. DR sweeps explicitly probe variation along axes that real deployments will encounter, then compress the resulting curve into one comparable number per axis.</p>
+
+          <h2 id="axes">The three DR axes</h2>
           <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
+            <thead><tr><th>Axis</th><th>What varies</th><th>Range</th></tr></thead>
             <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
+              <tr><td><code>light</code></td><td>Intensity, colour temperature, and direction of the scene lights.</td><td>0.2× to 2.0× nominal intensity; ±30° azimuth; ±1500K CCT.</td></tr>
+              <tr><td><code>view</code></td><td>Camera translation around the nominal viewpoint.</td><td>±15 cm in each of x / y / z.</td></tr>
+              <tr><td><code>rotation</code></td><td>Camera rotation about the look-at point.</td><td>±20° azimuth; ±10° elevation; ±5° roll.</td></tr>
             </tbody>
           </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
+          <p>Each axis is swept with a fixed number of perturbation levels (default: 6 steps from 0 to the maximum). For each level, the same task graph runs N episodes; the success rate is recorded as a point on the axis's curve.</p>
 
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
+          <h2 id="ausc">AUSC normalisation</h2>
+          <p>The raw output of one axis is a curve <em>success vs. perturbation magnitude</em>. AUSC compresses this curve to a scalar:</p>
+          <div class="my-4 rounded-lg border border-hairline dark:border-white/10 p-4 bg-soft dark:bg-d-surface font-mono text-[13px] leading-[1.7]">
+            <code>AUSC = ∫₀¹ success(perturbation_normalised) d(perturbation) ∈ [0, 1]</code>
+          </div>
+          <p>The perturbation axis is normalised so that 0 is no perturbation and 1 is the configured maximum. AUSC of 1.0 means the policy is fully robust over the entire configured range; 0.5 means it falls off linearly; 0 means it collapses immediately. The normalisation makes AUSC scores comparable across axes and across policies.</p>
 
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
+          <h2 id="reading">Reading the P axis</h2>
+          <pre class="code-block">{
+  <span class="c-key">"perception"</span>: {
+    <span class="c-key">"ausc"</span>: {
+      <span class="c-key">"light"</span>:    0.81,
+      <span class="c-key">"view"</span>:     0.74,
+      <span class="c-key">"rotation"</span>: 0.55
+    },
+    <span class="c-key">"overall"</span>: 0.70,
+    <span class="c-key">"curve_points"</span>: {
+      <span class="c-key">"light"</span>:    [[0, 1.0], [0.2, 0.97], [0.4, 0.90], [0.6, 0.83], [0.8, 0.72], [1.0, 0.55]],
+      <span class="c-key">"view"</span>:     [[0, 1.0], [0.2, 0.95], [0.4, 0.83], [0.6, 0.70], [0.8, 0.58], [1.0, 0.40]],
+      <span class="c-key">"rotation"</span>: [[0, 1.0], [0.2, 0.83], [0.4, 0.60], [0.6, 0.41], [0.8, 0.30], [1.0, 0.18]]
+    }
+  }
+}</pre>
+          <p>The <strong>overall</strong> Perception score is the mean of the three AUSC values; <code>curve_points</code> preserves the full curve so you can re-plot it without re-running.</p>
 
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
+          <h2 id="configure">Configuring sweeps</h2>
+          <p>The default sweep configuration ships in <code>utils/eval_sweep.py</code> via <code>standard_dr_sweeps()</code>. Override at the call site:</p>
+          <pre class="code-block"><span class="c-key">from</span> utils.eval_sweep <span class="c-key">import</span> dr_sweep, standard_dr_sweeps
 
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
+cfgs = standard_dr_sweeps()
+cfgs[<span class="c-str">"view"</span>].steps = 10           <span class="c-comment"># finer-grained sweep on view</span>
+cfgs[<span class="c-str">"view"</span>].max_translation = 0.20  <span class="c-comment"># widen to ±20 cm</span>
 
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
+result = dr_sweep(env, graph, policy, episodes_per_step=20, configs=cfgs)
+<span class="c-key">print</span>(result.ausc)
+<span class="c-comment"># {'light': 0.81, 'view': 0.71, 'rotation': 0.55}</span></pre>
+          <p>The number of episodes-per-step is the main cost knob — 20 is the default; bump to 50 for low-variance final numbers.</p>
 
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
-
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
+          <h2 id="caveats">Caveats</h2>
+          <ul>
+            <li><strong>AUSC ≠ worst case.</strong> A high AUSC with a steep cliff at the end can still be fragile. Inspect <code>curve_points</code> directly when robustness is the headline claim.</li>
+            <li><strong>Axes interact.</strong> Real deployments perturb several axes at once. The product of three healthy single-axis AUSCs overestimates joint robustness; treat single-axis numbers as necessary, not sufficient.</li>
+            <li><strong>Training overlap.</strong> If your training data already includes the DR ranges, you're measuring fit, not generalisation. Report which augmentations are in-distribution.</li>
+          </ul>
 
         </div>
 
         <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
+          <a href="../evaluation/understanding.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Understanding</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
+          </a><a href="../evaluation/behavior.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Behavior</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,12 +284,12 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#why" class="toc-item">Why DR sweeps?</a>
+          <a href="#axes" class="toc-item">The three DR axes</a>
+          <a href="#ausc" class="toc-item">AUSC normalisation</a>
+          <a href="#reading" class="toc-item">Reading the P axis</a>
+          <a href="#configure" class="toc-item">Configuring sweeps</a>
+          <a href="#caveats" class="toc-item">Caveats</a>
         </nav>
       </aside>
 

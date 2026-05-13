@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>metafine_add · MetaFine User Guide</title>
+  <meta name="description" content="metafine_add — MetaFine user guide." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -146,7 +146,7 @@
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
         <div class="nav-section">Core Concepts</div>
         <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
@@ -179,7 +179,7 @@
         <a href="../assets/capabilities.html" class="nav-item">capabilities.json</a>
         <div class="nav-section">Built-in Agents</div>
         <a href="../agents/help.html" class="nav-item">metafine_help</a>
-        <a href="../agents/add.html" class="nav-item">metafine_add</a>
+        <a href="../agents/add.html" class="nav-item is-active">metafine_add</a>
         <div class="nav-section">Reference</div>
         <a href="../reference/cli.html" class="nav-item">CLI reference</a>
         <a href="../reference/api.html" class="nav-item">Python API</a>
@@ -188,87 +188,125 @@
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
+          User Guide · Built-in Agents · metafine_add
         </div>
 
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
+          metafine_add
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
+          A guided design assistant for new MetaFine artifacts — either a new atomic skill primitive or a new compositional task graph. It walks you through phase classification, affordance contracts, parameter signatures, and success predicates, then produces a code stub or YAML you can drop into the repo.
         </p>
 
         <div class="prose-doc mt-6">
 
-          <h2 id="requirements">System requirements</h2>
-          <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
-            <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
-            </tbody>
-          </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
+          <h2 id="what">What it does</h2>
+          <p><code>metafine_add</code> is a Claude Code skill that lives at <code>~/.claude/skills/metafine_add/</code>. It accelerates two recurring authoring tasks on the MetaFine platform:</p>
+          <ul>
+            <li><strong>Designing a new atomic skill</strong> — picks the right <a href="../concepts/skills.html">phase</a>, the required <a href="../concepts/affordances.html">affordances</a>, and a callable signature; produces a <code>@register_skill</code> stub ready for <code>core/skill.py</code>.</li>
+            <li><strong>Designing a new task graph</strong> — decomposes a multi-step procedure into <a href="../concepts/task_graphs.html">stages</a> with appropriate <a href="../concepts/predicates.html">success predicates</a>; produces a YAML stub for <code>configs/&lt;slug&gt;.yaml</code>.</li>
+          </ul>
+          <p>It produces artifacts; it doesn't ship them. You confirm before any file is written, and nothing is pushed to git.</p>
 
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
+          <h2 id="invoke">Invocation</h2>
+          <pre class="code-block"><span class="c-prompt">$</span> /metafine_add skill <span class="c-flag">&lt;one-line description&gt;</span>
+<span class="c-prompt">$</span> /metafine_add task <span class="c-flag">&lt;one-line description&gt;</span>
+<span class="c-prompt">$</span> /metafine_add <span class="c-flag">&lt;description&gt;</span>   <span class="c-comment"># mode inferred from the description</span>
+<span class="c-prompt">$</span> /metafine_add                <span class="c-comment"># interactive — agent asks "skill or task?"</span></pre>
+          <p>If the description is too thin to act on (e.g. just <em>"rotate"</em>), the agent asks up to two clarifying questions before producing a stub — no endless interrogation.</p>
 
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
+          <h2 id="skill-mode">Skill mode</h2>
+          <ol>
+            <li><strong>Phase.</strong> Classify into <code>interaction</code> / <code>continuation</code> / <code>bundle</code> from the description's contact semantics.</li>
+            <li><strong>Affordances.</strong> Pick the required subset from the 11-element closed set. If the operation can't be expressed within the existing set, the agent flags it and proposes either a combination or a platform-level extension.</li>
+            <li><strong>Signature.</strong> Standard MetaFine convention: <code>fn(env, target, *, &lt;keyword params with defaults&gt;)</code> returning <code>env.last_step_info</code>.</li>
+            <li><strong>Stub.</strong> Generate a complete <code>@register_skill(...)</code> + function shell with a numbered TODO body for the motion logic — never a fully-implemented body, because the planning math is task-specific.</li>
+            <li><strong>Smoke test.</strong> Suggest <code>python smoke_envs.py</code> after the file lands.</li>
+          </ol>
 
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
+          <h2 id="task-mode">Task mode</h2>
+          <ol>
+            <li><strong>Decompose.</strong> Break the procedure into an ordered list of stages.</li>
+            <li><strong>Pick skills.</strong> One existing skill per stage, looked up against <code>SKILL_REGISTRY</code>.</li>
+            <li><strong>Pick targets.</strong> An <code>(asset_id, part)</code> per stage. The agent can fetch the target asset's <code>capabilities.json</code> to confirm the part offers the right affordances.</li>
+            <li><strong>Write predicates.</strong> One success predicate per stage from the 6-atom DSL (<code>grasped / joint_value / lifted / pose_near / placed_in / stacked_on</code>) composed with <code>and / or / not</code>.</li>
+            <li><strong>YAML.</strong> Emit a complete YAML stub for <code>configs/&lt;slug&gt;.yaml</code>.</li>
+            <li><strong>Next.</strong> Suggest <code>python record.py --task-graph configs/&lt;slug&gt;.yaml --trials 5</code>.</li>
+          </ol>
 
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
+          <h2 id="validate">Built-in validation</h2>
+          <p>Before declaring a stub ready, the agent walks four checks:</p>
+          <ul>
+            <li><strong>Skill exists</strong> — every named skill resolves in <code>SKILL_REGISTRY</code> (live grep on A100 when needed).</li>
+            <li><strong>Affordance contract holds</strong> — each target part declares all the affordances the chosen skill requires (per the asset's <code>capabilities.json</code>).</li>
+            <li><strong>Phase ordering</strong> — no continuation skill precedes its interaction; bundle skills stand alone.</li>
+            <li><strong>Predicate atoms in scope</strong> — only the 6 documented atoms; the agent refuses to invent new ones.</li>
+          </ul>
+          <p>For a task graph, you can run the live validator the agent suggests:</p>
+          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-m</span> utils.task_graph <span class="c-flag">--validate</span> configs/&lt;slug&gt;.yaml</pre>
 
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
+          <h2 id="examples">Worked examples</h2>
 
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
+          <h3>Skill example</h3>
+          <pre class="code-block"><span class="c-comment"># Invocation</span>
+<span class="c-prompt">$</span> /metafine_add skill rotate a screw cap by 90 degrees while holding it
 
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
+<span class="c-comment"># Agent output (excerpt)</span>
+@register_skill(
+    phase=<span class="c-str">"continuation"</span>,
+    requires=(<span class="c-str">"rotatable"</span>,),
+    defaults={<span class="c-str">"angle_deg"</span>: 90, <span class="c-str">"velocity"</span>: 0.3},
+)
+<span class="c-key">def</span> hold_and_rotate(env, target, *, angle_deg=90, velocity=0.3):
+    <span class="c-comment">"""Rotate the already-grasped part about its revolute joint."""</span>
+    <span class="c-comment"># TODO: 1. assert engagement, 2. compute target joint value,</span>
+    <span class="c-comment">#       3. drive with PandaArmMotionPlanningSolver at `velocity`.</span>
+    <span class="c-key">raise</span> NotImplementedError</pre>
+
+          <h3>Task example</h3>
+          <pre class="code-block"><span class="c-comment"># Invocation</span>
+<span class="c-prompt">$</span> /metafine_add task open the cap of jar 100221 and pour into cup
+
+<span class="c-comment"># Agent output (excerpt)</span>
+<span class="c-key">name</span>: open_jar_and_pour
+<span class="c-key">stages</span>:
+  - <span class="c-key">stage_name</span>: engage_cap
+    <span class="c-key">skill</span>: grasp_part
+    <span class="c-key">target</span>: { <span class="c-key">object</span>: 100221, <span class="c-key">part</span>: cap }
+    <span class="c-key">success</span>: <span class="c-str">grasped("cap")</span>
+  - <span class="c-key">stage_name</span>: twist_open
+    <span class="c-key">skill</span>: pure_rotate
+    <span class="c-key">params</span>: { <span class="c-key">angle_deg</span>: 120 }
+    <span class="c-key">success</span>: <span class="c-str">and(grasped("cap"), joint_value("cap", "&gt;=", 2.094))</span>
+  - <span class="c-key">stage_name</span>: lift_clear
+    <span class="c-key">skill</span>: pure_lift
+    <span class="c-key">params</span>: { <span class="c-key">height_m</span>: 0.05 }
+    <span class="c-key">success</span>: <span class="c-str">and(grasped("cap"), lifted("cap", height_m: 0.05))</span></pre>
+
+          <h2 id="limits">Limits</h2>
+          <ul>
+            <li><strong>No remote writes.</strong> The agent proposes; you confirm; only then it writes a local file. It never modifies anything on A100.</li>
+            <li><strong>Closed-set discipline.</strong> 11 affordances. 6 predicate atoms. 3 phases. The agent refuses to invent variants and routes you to the platform extension path if your need is genuinely new.</li>
+            <li><strong>Stubs, not implementations.</strong> Skill stubs come with numbered TODO bodies — the motion-planning code is task-specific and the agent won't speculate.</li>
+            <li><strong>Pair with <code>metafine_help</code>.</strong> When the design choice depends on platform context (<em>"which skill already does X?"</em>, <em>"what does pure_rotate actually return?"</em>), <code>metafine_add</code> calls into the same routing logic as <a href="help.html"><code>metafine_help</code></a>.</li>
+          </ul>
 
         </div>
 
         <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
+          <a href="../agents/help.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">metafine_help</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
+          </a><a href="../reference/cli.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">CLI reference</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,12 +316,13 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#what" class="toc-item">What it does</a>
+          <a href="#invoke" class="toc-item">Invocation</a>
+          <a href="#skill-mode" class="toc-item">Skill mode</a>
+          <a href="#task-mode" class="toc-item">Task mode</a>
+          <a href="#validate" class="toc-item">Built-in validation</a>
+          <a href="#examples" class="toc-item">Worked examples</a>
+          <a href="#limits" class="toc-item">Limits</a>
         </nav>
       </aside>
 

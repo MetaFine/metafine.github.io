@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>Architecture · MetaFine User Guide</title>
+  <meta name="description" content="Architecture — MetaFine user guide." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -146,10 +146,10 @@
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
         <div class="nav-section">Core Concepts</div>
-        <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
+        <a href="../concepts/architecture.html" class="nav-item is-active">Architecture</a>
         <a href="../concepts/skills.html" class="nav-item">Atomic skills</a>
         <a href="../concepts/affordances.html" class="nav-item">Affordances</a>
         <a href="../concepts/task_graphs.html" class="nav-item">Task graphs</a>
@@ -188,87 +188,98 @@
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
+          User Guide · Core Concepts · Architecture
         </div>
 
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
+          Architecture
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
+          MetaFine sits on a three-layer pipeline: atomic skills compose into task graphs, task graphs drive recording and rollout, and rollouts feed a three-dimension diagnostic. Every concept maps onto something concrete in the source tree.
         </p>
 
         <div class="prose-doc mt-6">
 
-          <h2 id="requirements">System requirements</h2>
+          <h2 id="pipeline">The pipeline</h2>
+          <p>A MetaFine evaluation is the same shape every time: an atomic-skill primitive is composed into a multi-step task graph; the task graph drives a recording or rollout; the rollout's trajectory and per-stage outcomes are scored along three orthogonal axes.</p>
+
+          <div class="my-6 rounded-lg border border-hairline dark:border-white/10 bg-soft dark:bg-d-surface p-5 font-mono text-[12.5px] leading-[1.7] overflow-x-auto">
+<span class="text-understand">[ Atomic skills ]</span>     →   <span class="text-perceive">[ Compositional task graph ]</span>   →   <span class="text-behave">[ Diagnostic evaluation ]</span><br/>
+&nbsp;<span class="text-muted dark:text-d-muted">core/skill.py</span>                 <span class="text-muted dark:text-d-muted">configs/*.yaml · core/predicates.py</span>             <span class="text-muted dark:text-d-muted">utils/eval_*.py</span><br/><br/>
+21 typed primitives           Stages + success predicates                  Understanding / Perception / Behavior<br/>
+@register_skill               YAML or Python DSL                           one results.json per run
+          </div>
+
+          <h2 id="skills">Layer 1 — Atomic skills</h2>
+          <p>A <strong>skill</strong> is a motion-planning solver that achieves one well-defined interaction with one well-defined part of an articulated asset — <em>grasp this handle</em>, <em>rotate this knob 90°</em>, <em>slide this drawer 5 cm</em>. The 21 atomic skills MetaFine ships fall into three <strong>phases</strong>:</p>
+          <ul>
+            <li><strong class="text-understand">Interaction</strong> — engages the object (transitions contact state). E.g. <code>grasp_part</code>, <code>press</code>, <code>flip_switch</code>, <code>lift_lid</code>.</li>
+            <li><strong class="text-perceive">Continuation</strong> — operates on an already-engaged part; safe to chain after an interaction. E.g. <code>pure_rotate</code>, <code>pure_slide</code>, <code>pure_insert</code>, <code>release_gripper</code>.</li>
+            <li><strong class="text-behave">Bundle</strong> — pre-composed multi-step routines kept atomic for now (until we split them). E.g. <code>lid_opening</code>, <code>stand_up</code>, <code>toggle_switch</code>.</li>
+          </ul>
+          <p>Every skill declares the <strong>affordances</strong> it requires of its target part — <code>grasp_part</code> requires <code>graspable</code>, <code>pure_rotate</code> requires <code>rotatable</code>, etc. See <a href="affordances.html">Affordances</a> for the closed-set vocabulary.</p>
+
+          <h2 id="graphs">Layer 2 — Compositional task graphs</h2>
+          <p>A <strong>task graph</strong> is a YAML chain of skill calls with optional per-stage success predicates. Multi-step tasks ("grasp the cap, then lift it 5 cm") become 20-line YAML files rather than new env classes:</p>
+          <pre class="code-block"><span class="c-key">name</span>: grasp_and_lift_cap
+<span class="c-key">stages</span>:
+  - <span class="c-key">skill</span>: grasp_part
+    <span class="c-key">target</span>: { <span class="c-key">object</span>: 100221, <span class="c-key">part</span>: cap }
+    <span class="c-key">success</span>: <span class="c-str">grasped("cap")</span>
+  - <span class="c-key">skill</span>: pure_lift
+    <span class="c-key">success</span>: <span class="c-str">and(grasped("cap"), lifted("cap", height_m: 0.05))</span></pre>
+          <p>Predicates compile to a callable evaluated each step — so per-stage success rates are computed for free. The predicate DSL (<code>and / or / not</code> plus six atomic predicates) is documented under <a href="predicates.html">Predicate DSL</a>.</p>
+
+          <h2 id="eval">Layer 3 — Diagnostic evaluation</h2>
+          <p>A rollout produces three orthogonal signals that get scored along the three axes:</p>
+          <ul>
+            <li><strong class="text-understand">Understanding</strong> — per-stage success rates over the task graph; surfaces <em>where</em> the chain breaks.</li>
+            <li><strong class="text-perceive">Perception</strong> — domain-randomisation sweeps (lighting, view, jitter) with AUSC normalisation; surfaces robustness to visual variation.</li>
+            <li><strong class="text-behave">Behavior</strong> — trajectory smoothness (jerk RMS, velocity variance, path length); surfaces jerky / hesitant / chunk-artefact policies.</li>
+          </ul>
+          <p>The three scores are emitted into a single <code>results.json</code> per run, so two policies can be compared across the full diagnostic plane.</p>
+
+          <h2 id="flow">How a request flows</h2>
+          <ol>
+            <li><strong>Resolve.</strong> The task graph names a skill plus a target part. The <code>SKILL_REGISTRY</code> looks up the skill spec; the asset's <code>capabilities.json</code> confirms the target part offers the required affordances. A mismatch fails fast with a clear error.</li>
+            <li><strong>Plan.</strong> The skill solver constructs a motion plan (or the policy network predicts an action chunk).</li>
+            <li><strong>Roll out.</strong> Each step's observation is captured; the stage predicate is evaluated.</li>
+            <li><strong>Score.</strong> At end-of-episode, the three diagnostic dimensions are aggregated; the result is appended to the run's <code>results.json</code>.</li>
+          </ol>
+
+          <h2 id="source">Source-tree map</h2>
           <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
+            <thead><tr><th>Module</th><th>Role</th></tr></thead>
             <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
+              <tr><td><code>core/skill.py</code></td><td>21 motion-planning skill solvers.</td></tr>
+              <tr><td><code>core/skill_registry.py</code></td><td><code>@register_skill</code>, <code>SKILL_REGISTRY</code>, the 11-affordance vocabulary.</td></tr>
+              <tr><td><code>core/predicates.py</code></td><td>Predicate-DSL compiler.</td></tr>
+              <tr><td><code>core/env.py</code></td><td>19 Gym envs (single-skill + bundle).</td></tr>
+              <tr><td><code>core/scene.py</code></td><td>SceneBuilders (data-driven, no per-asset branches).</td></tr>
+              <tr><td><code>core/env_mixins.py</code></td><td><code>EvalDREnvMixin</code> — camera / light jitter helpers.</td></tr>
+              <tr><td><code>utils/task_graph.py</code></td><td><code>TaskGraph</code> dataclass + YAML loader + runner.</td></tr>
+              <tr><td><code>utils/eval_metrics.py</code></td><td><code>EpisodeResult</code>, <code>EvalSummary</code>, <code>compute_smoothness</code>.</td></tr>
+              <tr><td><code>utils/eval_sweep.py</code></td><td><code>dr_sweep</code> + <code>standard_dr_sweeps</code> with AUSC.</td></tr>
+              <tr><td><code>utils/eval_setup.py</code></td><td><code>make_eval_env</code> — dispatches single-skill ↔ task-graph mode.</td></tr>
             </tbody>
           </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
-
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
-
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
-
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
-
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
-
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
-
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
-
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
 
         </div>
 
         <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
+          <a href="../getting_started/quickstart.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
+          </a><a href="../concepts/skills.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Atomic skills</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,12 +289,12 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#pipeline" class="toc-item">The pipeline</a>
+          <a href="#skills" class="toc-item">Layer 1 — Atomic skills</a>
+          <a href="#graphs" class="toc-item">Layer 2 — Compositional task graphs</a>
+          <a href="#eval" class="toc-item">Layer 3 — Diagnostic evaluation</a>
+          <a href="#flow" class="toc-item">How a request flows</a>
+          <a href="#source" class="toc-item">Source-tree map</a>
         </nav>
       </aside>
 

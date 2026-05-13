@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>Recording · MetaFine User Guide</title>
+  <meta name="description" content="Record expert demonstrations with record.py — single-skill and task-graph modes." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -71,20 +71,12 @@
     .prose-doc ul { margin-bottom: 16px; padding-left: 20px; list-style: disc; }
     .prose-doc ul li { margin-bottom: 6px; }
     .prose-doc ul li::marker { color: #a8a8aa; }
-    .prose-doc ol { margin-bottom: 16px; padding-left: 24px; list-style: decimal; }
-    .prose-doc ol li { margin-bottom: 6px; }
-    .prose-doc table { width: 100%; font-size: 14px; line-height: 1.5; margin-bottom: 16px; border-collapse: collapse; }
-    .prose-doc th { text-align: left; font-weight: 600; color: #171717; padding: 8px 12px; border-bottom: 1px solid #ebebeb; }
-    .dark .prose-doc th { color: #ededed; border-color: rgba(255,255,255,0.10); }
-    .prose-doc td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-    .dark .prose-doc td { border-color: rgba(255,255,255,0.06); }
 
-    .code-block { background: #0a0a0a; color: #ededed; border-radius: 8px; padding: 14px 16px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; margin: 16px 0; }
+    .code-block { background: #0a0a0a; color: #ededed; border-radius: 8px; padding: 14px 16px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; }
     .dark .code-block { background: #141414; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); }
     .code-block .c-comment { color: #888; }
     .code-block .c-flag    { color: #7cebcb; }
     .code-block .c-str     { color: #ffd866; }
-    .code-block .c-key     { color: #de1d8d; }
     .code-block .c-prompt  { color: #888; user-select: none; }
 
     .nav-item { display: flex; align-items: center; padding: 6px 12px; font-size: 14px; color: #5a5a5c; border-radius: 6px; }
@@ -106,6 +98,14 @@
     .sticky-side { position: sticky; top: 64px; max-height: calc(100vh - 64px); overflow-y: auto; }
     .card-link { transition: transform .15s ease, box-shadow .15s ease; }
     .card-link:hover { transform: translateY(-2px); }
+
+    .ref-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0 24px; }
+    .ref-table th, .ref-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #ebebeb; vertical-align: top; }
+    .dark .ref-table th, .dark .ref-table td { border-bottom-color: rgba(255,255,255,0.08); }
+    .ref-table th { font-weight: 600; color: #171717; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .dark .ref-table th { color: #ededed; }
+    .ref-table code { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12.5px; background: #f7f7f7; color: #1c1c1e; padding: 1px 5px; border-radius: 4px; border: 1px solid #ebebeb; }
+    .dark .ref-table code { background: #1c1c1c; color: #ededed; border-color: rgba(255,255,255,0.10); }
   </style>
 
   <script>
@@ -125,6 +125,7 @@
         <nav class="hidden md:flex items-center gap-6 text-[13.5px] text-muted dark:text-d-muted">
           <a href="../../index.html" class="hover:text-ink dark:hover:text-d-ink">Home</a>
           <a href="../index.html" class="text-ink dark:text-d-ink font-medium">User Guide</a>
+          <a href="../audit/index.html" class="hover:text-ink dark:hover:text-d-ink">Asset Audit</a>
           <a href="https://github.com/aatt523/FGManip" class="hover:text-ink dark:hover:text-d-ink">GitHub</a>
         </nav>
       </div>
@@ -146,25 +147,29 @@
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
+
         <div class="nav-section">Core Concepts</div>
         <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
         <a href="../concepts/skills.html" class="nav-item">Atomic skills</a>
         <a href="../concepts/affordances.html" class="nav-item">Affordances</a>
         <a href="../concepts/task_graphs.html" class="nav-item">Task graphs</a>
         <a href="../concepts/predicates.html" class="nav-item">Predicate DSL</a>
+
         <div class="nav-section">Evaluation</div>
         <a href="../evaluation/understanding.html" class="nav-item">Understanding</a>
         <a href="../evaluation/perception.html" class="nav-item">Perception</a>
         <a href="../evaluation/behavior.html" class="nav-item">Behavior</a>
         <a href="../evaluation/hybrid.html" class="nav-item">Real-sim hybrid (PPI)</a>
         <a href="../evaluation/results_schema.html" class="nav-item">Results schema</a>
+
         <div class="nav-section">Data Pipelines</div>
-        <a href="../data/recording.html" class="nav-item">Recording</a>
-        <a href="../data/replay.html" class="nav-item">Replay & merge</a>
-        <a href="../data/lerobot.html" class="nav-item">LeRobot export</a>
-        <a href="../data/rlds.html" class="nav-item">RLDS export</a>
+        <a href="recording.html" class="nav-item is-active">Recording</a>
+        <a href="replay.html" class="nav-item">Replay &amp; merge</a>
+        <a href="lerobot.html" class="nav-item">LeRobot export</a>
+        <a href="rlds.html" class="nav-item">RLDS export</a>
+
         <div class="nav-section">Policies</div>
         <a href="../policies/overview.html" class="nav-item">Overview</a>
         <a href="../policies/act.html" class="nav-item">ACT</a>
@@ -173,13 +178,16 @@
         <a href="../policies/pi0.html" class="nav-item">π0 / π0.5</a>
         <a href="../policies/starvla.html" class="nav-item">StarVLA</a>
         <a href="../policies/adding.html" class="nav-item">Adding a policy</a>
+
         <div class="nav-section">Asset Library</div>
         <a href="../assets/overview.html" class="nav-item">Asset overview</a>
         <a href="../assets/adding.html" class="nav-item">Onboarding a URDF</a>
         <a href="../assets/capabilities.html" class="nav-item">capabilities.json</a>
+
         <div class="nav-section">Built-in Agents</div>
         <a href="../agents/help.html" class="nav-item">metafine_help</a>
         <a href="../agents/add.html" class="nav-item">metafine_add</a>
+
         <div class="nav-section">Reference</div>
         <a href="../reference/cli.html" class="nav-item">CLI reference</a>
         <a href="../reference/api.html" class="nav-item">Python API</a>
@@ -188,87 +196,91 @@
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
+          User Guide · Data Pipelines · Recording
         </div>
 
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
+          Recording demonstrations
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
+          <code class="font-mono">record.py</code> is the single entrypoint for generating expert demonstrations. It runs an <strong class="text-ink dark:text-d-ink font-medium">MP-based solver</strong> (motion planning + scripted skill controllers) inside the SAPIEN simulator, then dumps successful episodes as HDF5 trajectories paired with video. Two modes: <em>single-skill</em> for atomic-skill data, <em>--task-graph</em> for full compositional tasks.
         </p>
 
-        <div class="prose-doc mt-6">
+        <div class="prose-doc mt-8">
 
-          <h2 id="requirements">System requirements</h2>
-          <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
+          <h2 id="single-skill">Single-skill mode</h2>
+          <p>
+            Use this mode when you want to collect demos for one atomic skill against one asset — typical for pre-training or skill-level ablations. Supply <code>--task</code> (one of the 21 skill names) and <code>--object</code> (the asset id). The expert MP-solver figures out the correct part to act on by querying the asset's <code>capabilities.json</code>.
+          </p>
+          <pre class="code-block my-4"><span class="c-comment"># Record 20 grasps on asset 100221, save to demos/grasp_part/100221/</span>
+<span class="c-prompt">$</span> python record.py <span class="c-flag">--task</span> grasp_part <span class="c-flag">--object</span> 100221 <span class="c-flag">--trials</span> 20
+
+<span class="c-comment"># Headed mode + custom seed for reproducibility</span>
+<span class="c-prompt">$</span> python record.py <span class="c-flag">--task</span> press <span class="c-flag">--object</span> 103594 \
+    <span class="c-flag">--trials</span> 10 <span class="c-flag">--seed</span> 42 <span class="c-flag">--render-mode</span> human</pre>
+
+          <h2 id="task-graph">--task-graph mode</h2>
+          <p>
+            For compositional tasks, point <code>--task-graph</code> at a YAML chain. Each node is a skill call against a named asset/part; predicate goals are evaluated after the final node to decide if the episode counts as a success. Only <em>successful</em> trajectories are written to disk.
+          </p>
+          <pre class="code-block my-4"><span class="c-comment"># Record 30 successful long-horizon "open lid → rotate inner part" demos</span>
+<span class="c-prompt">$</span> python record.py <span class="c-flag">--task-graph</span> configs/lid_then_rotate.yaml <span class="c-flag">--trials</span> 30
+
+<span class="c-comment"># Custom output dir + bumped MP horizon for longer chains</span>
+<span class="c-prompt">$</span> python record.py <span class="c-flag">--task-graph</span> configs/peg_in_hole.yaml \
+    <span class="c-flag">--trials</span> 50 <span class="c-flag">--max-steps</span> 600 <span class="c-flag">--output</span> demos/peg_in_hole_v2/</pre>
+
+          <h2 id="solver">How the expert solver works</h2>
+          <p>
+            Each atomic skill is paired with a scripted controller that uses motion planning for free-space motion and pre-programmed contact-phase trajectories for the engagement step. The solver is deterministic given a seed, so re-running with the same <code>--seed</code> reproduces the exact trajectory. Failure cases (e.g. unreachable target, IK fail) are silently retried until <code>--trials</code> successes are written.
+          </p>
+
+          <h2 id="output">Output layout</h2>
+          <p>Each call produces a per-task / per-object folder under <code>demos/</code>:</p>
+          <pre class="code-block my-4"><span class="c-comment">demos/
+&nbsp; grasp_part/
+&nbsp;   100221/
+&nbsp;     ep_0.h5        # observation/action streams + final predicate state
+&nbsp;     ep_0.mp4       # third-person rollout video
+&nbsp;     ep_1.h5
+&nbsp;     ep_1.mp4
+&nbsp;     ...</span></pre>
+          <p>
+            Each <code>ep_*.h5</code> is a flat HDF5 with arrays for <code>observation.image</code>, <code>observation.state</code>, <code>action</code>, plus a small attribute dict (task name, asset id, seed, skill phase boundaries). The MP4 is third-person at 30 FPS for visual QA — feed it to <a href="replay.html"><code>utils.replay</code></a> when you need to walk the trajectory step-by-step.
+          </p>
+
+          <h2 id="flag-summary">Common flags</h2>
+          <table class="ref-table">
+            <thead><tr><th>Flag</th><th>Default</th><th>Notes</th></tr></thead>
             <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
+              <tr><td><code>--task</code></td><td>—</td><td>Atomic skill name (mutually exclusive with <code>--task-graph</code>)</td></tr>
+              <tr><td><code>--task-graph</code></td><td>—</td><td>Path to a task-graph YAML</td></tr>
+              <tr><td><code>--object</code></td><td>—</td><td>Asset id (required in single-skill mode)</td></tr>
+              <tr><td><code>--trials</code></td><td>1</td><td>Number of successful episodes to write</td></tr>
+              <tr><td><code>--seed</code></td><td>0</td><td>Base seed; per-episode seeds are <code>seed + idx</code></td></tr>
+              <tr><td><code>--max-steps</code></td><td>400</td><td>Per-episode simulator step budget</td></tr>
+              <tr><td><code>--render-mode</code></td><td><code>rgb_array</code></td><td><code>human</code> opens the SAPIEN viewer</td></tr>
+              <tr><td><code>--output</code></td><td><code>demos/</code></td><td>Override the output root</td></tr>
             </tbody>
           </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
-
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
-
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
-
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
-
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
-
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
-
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
-
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
-
+          <p class="text-[13px] text-muted dark:text-d-muted">Canonical source: <code>python record.py --help</code>.</p>
         </div>
 
-        <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
+        <nav class="mt-12 pt-6 hairline-t flex items-center justify-between">
+          <a href="../evaluation/results_schema.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
-              <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Prev</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Results schema</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
-             class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
+          </a>
+          <a href="replay.html"
+             class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Replay &amp; merge</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,12 +290,11 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#single-skill" class="toc-item">Single-skill mode</a>
+          <a href="#task-graph" class="toc-item">--task-graph mode</a>
+          <a href="#solver" class="toc-item">How the expert solver works</a>
+          <a href="#output" class="toc-item">Output layout</a>
+          <a href="#flag-summary" class="toc-item">Common flags</a>
         </nav>
       </aside>
 
@@ -318,13 +329,10 @@
       var y = window.scrollY + 120;
       var active = headings[0];
       for (var h of headings) { if (h.offsetTop <= y) active = h; }
-      tocLinks.forEach(a => a.classList.toggle('is-active', a.getAttribute('href') === '#' + (active && active.id)));
+      tocLinks.forEach(a => a.classList.toggle('is-active', a.getAttribute('href') === '#' + active.id));
     }
-    if (headings.length) {
-      document.addEventListener('scroll', syncToc, { passive: true });
-      syncToc();
-    }
+    document.addEventListener('scroll', syncToc, { passive: true });
+    syncToc();
   </script>
-
 </body>
 </html>

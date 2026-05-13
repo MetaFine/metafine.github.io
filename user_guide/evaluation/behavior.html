@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>Behavior · MetaFine User Guide</title>
+  <meta name="description" content="Behavior — MetaFine user guide." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -146,7 +146,7 @@
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
         <div class="nav-section">Core Concepts</div>
         <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
@@ -157,7 +157,7 @@
         <div class="nav-section">Evaluation</div>
         <a href="../evaluation/understanding.html" class="nav-item">Understanding</a>
         <a href="../evaluation/perception.html" class="nav-item">Perception</a>
-        <a href="../evaluation/behavior.html" class="nav-item">Behavior</a>
+        <a href="../evaluation/behavior.html" class="nav-item is-active">Behavior</a>
         <a href="../evaluation/hybrid.html" class="nav-item">Real-sim hybrid (PPI)</a>
         <a href="../evaluation/results_schema.html" class="nav-item">Results schema</a>
         <div class="nav-section">Data Pipelines</div>
@@ -188,87 +188,76 @@
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
+          User Guide · Evaluation · Behavior
         </div>
 
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
+          Behavior
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
+          The Behavior axis answers “did the policy execute its plan smoothly?” via three trajectory-level metrics — jerk RMS, velocity variance, and path length — that surface jerky, hesitant, or chunk-of-N-artefact policies that happen to succeed.
         </p>
 
         <div class="prose-doc mt-6">
 
-          <h2 id="requirements">System requirements</h2>
-          <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
-            <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
-            </tbody>
-          </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
+          <h2 id="why">Why behaviour?</h2>
+          <p>Two policies can produce identical success rates while moving in completely different ways. One executes a clean, smooth motion at constant pace; the other oscillates wildly, snaps between waypoints, or pauses for milliseconds between every action chunk. From a deployment perspective those policies are not interchangeable — one is safe near a human; the other isn't.</p>
+          <p>The Behavior axis turns motion quality into three scalars that you can read at a glance and that catch a category of failure modes the other two axes are blind to.</p>
 
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
+          <h2 id="jerk">Jerk RMS</h2>
+          <p>The root-mean-square of the third time-derivative of the end-effector position, integrated over the rollout. Jerk is the canonical objective signal that motion is "smooth" — humans grade motions on jerk; safety standards constrain it; jerky control aliases are a well-known artefact of chunked autoregressive policies.</p>
+          <div class="my-4 rounded-lg border border-hairline dark:border-white/10 p-4 bg-soft dark:bg-d-surface font-mono text-[13px] leading-[1.7]">
+            <code>jerk_rms = sqrt(mean over t of ||d³p/dt³||²)</code>
+          </div>
+          <p>Reported in m/s³. Lower is smoother. A skilled human teleop demonstration sits around 0.05; a healthy diffusion policy is typically 0.05–0.15; chunked autoregressive policies often hit 0.5+ at chunk boundaries.</p>
 
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
+          <h2 id="vel-var">Velocity variance</h2>
+          <p>The variance of the magnitude of the end-effector velocity across the rollout, normalised to the mean velocity. Captures hesitation and stop-start behaviour that jerk RMS can miss when motion is locally smooth but globally inconsistent.</p>
+          <div class="my-4 rounded-lg border border-hairline dark:border-white/10 p-4 bg-soft dark:bg-d-surface font-mono text-[13px] leading-[1.7]">
+            <code>vel_var = Var(||dp/dt||) / max(Mean(||dp/dt||), ε)</code>
+          </div>
+          <p>Dimensionless. Lower is more uniform; values above ~0.5 typically indicate the policy is stopping and restarting.</p>
 
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
+          <h2 id="path">Path-length ratio</h2>
+          <p>The actual end-effector path length divided by the straight-line distance between start and goal. The lower bound is 1.0 (perfectly direct); large values indicate detours, retracing, or oscillation.</p>
+          <div class="my-4 rounded-lg border border-hairline dark:border-white/10 p-4 bg-soft dark:bg-d-surface font-mono text-[13px] leading-[1.7]">
+            <code>path_length_ratio = ∫ ||dp/dt|| dt  /  ||p_end − p_start||</code>
+          </div>
+          <p>Dimensionless. Pure motion-planning solvers hit 1.0–1.2 routinely; learned policies on well-trained tasks land at 1.2–1.5; values past 2.0 signal pathological motion or repeated retries.</p>
 
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
+          <h2 id="reading">Reading the B axis</h2>
+          <pre class="code-block">{
+  <span class="c-key">"behavior"</span>: {
+    <span class="c-key">"jerk_rms"</span>:          0.082,
+    <span class="c-key">"vel_var"</span>:           0.011,
+    <span class="c-key">"path_length_ratio"</span>: 1.18
+  }
+}</pre>
+          <p>The three numbers are deliberately <em>not</em> aggregated into one — they probe different phenomena. Read them together with the U-axis to see whether smoothness is being paid for with failure or vice versa.</p>
 
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
-
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
-
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
+          <h2 id="caveats">Caveats</h2>
+          <ul>
+            <li><strong>Frame rate matters.</strong> Jerk RMS is computed by finite differences. The eval runs at 25 Hz by default; report the rate alongside any cross-paper comparison.</li>
+            <li><strong>Success-conditioned reporting.</strong> Behaviour metrics are aggregated over <em>successful</em> episodes only by default — averaging over collapse-to-zero rollouts is misleading. Toggle via <code>--smoothness-all-episodes</code>.</li>
+            <li><strong>End effector vs. joint.</strong> Default is end-effector position in world frame. For comparing chunked-action policies fairly, also inspect joint-space jerk in <code>results.json:behavior.joint_jerk_rms</code> when reported.</li>
+          </ul>
 
         </div>
 
         <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
+          <a href="../evaluation/perception.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Perception</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
+          </a><a href="../evaluation/hybrid.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Real-sim hybrid (PPI)</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,12 +267,12 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#why" class="toc-item">Why behaviour?</a>
+          <a href="#jerk" class="toc-item">Jerk RMS</a>
+          <a href="#vel-var" class="toc-item">Velocity variance</a>
+          <a href="#path" class="toc-item">Path-length ratio</a>
+          <a href="#reading" class="toc-item">Reading the B axis</a>
+          <a href="#caveats" class="toc-item">Caveats</a>
         </nav>
       </aside>
 

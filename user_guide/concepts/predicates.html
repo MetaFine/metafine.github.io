@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>Predicate DSL · MetaFine User Guide</title>
+  <meta name="description" content="Predicate DSL — MetaFine user guide." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -146,14 +146,14 @@
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
         <div class="nav-section">Core Concepts</div>
         <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
         <a href="../concepts/skills.html" class="nav-item">Atomic skills</a>
         <a href="../concepts/affordances.html" class="nav-item">Affordances</a>
         <a href="../concepts/task_graphs.html" class="nav-item">Task graphs</a>
-        <a href="../concepts/predicates.html" class="nav-item">Predicate DSL</a>
+        <a href="../concepts/predicates.html" class="nav-item is-active">Predicate DSL</a>
         <div class="nav-section">Evaluation</div>
         <a href="../evaluation/understanding.html" class="nav-item">Understanding</a>
         <a href="../evaluation/perception.html" class="nav-item">Perception</a>
@@ -188,87 +188,93 @@
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
+          User Guide · Core Concepts · Predicate DSL
         </div>
 
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
+          Predicate DSL
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
+          Per-stage success is written in a small predicate language: three combinators, six atoms, no operator overloading. Each predicate compiles to a callable that is evaluated each step.
         </p>
 
         <div class="prose-doc mt-6">
 
-          <h2 id="requirements">System requirements</h2>
+          <h2 id="grammar">Grammar</h2>
+          <p>The predicate language is intentionally minimal — it is YAML-friendly, parseable without a library, and trivially serialisable. The grammar in EBNF:</p>
+          <pre class="code-block">predicate  ::=  atom | combinator
+combinator ::=  <span class="c-str">"and"</span> "(" predicate {"," predicate} ")"
+             |  <span class="c-str">"or"</span>  "(" predicate {"," predicate} ")"
+             |  <span class="c-str">"not"</span> "(" predicate ")"
+atom       ::=  name "(" args ")"
+name       ::=  one of: grasped, joint_value, lifted, pose_near, placed_in, stacked_on
+args       ::=  positional &amp; keyword arguments per atom</pre>
+
+          <h2 id="atoms">The six atoms</h2>
           <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
+            <thead><tr><th>Atom</th><th>Signature</th><th>True when …</th></tr></thead>
             <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
+              <tr><td><code>grasped</code></td><td><code>grasped(part)</code></td><td>The gripper has closed on <code>part</code> and force-closure is stable.</td></tr>
+              <tr><td><code>joint_value</code></td><td><code>joint_value(part, op, value)</code></td><td>The named part's joint coordinate satisfies the comparator. <code>op</code> ∈ <code>{">", ">=", "<", "<=", "≈"}</code>.</td></tr>
+              <tr><td><code>lifted</code></td><td><code>lifted(part, height_m=X)</code></td><td>The part's base z has risen by at least <code>X</code> metres relative to its initial pose.</td></tr>
+              <tr><td><code>pose_near</code></td><td><code>pose_near(part, target_pose, tol)</code></td><td>The part's pose is within <code>tol</code> (xyz + axis-angle) of the target pose.</td></tr>
+              <tr><td><code>placed_in</code></td><td><code>placed_in(a, b)</code></td><td>Object <em>a</em> is being supported by container <em>b</em> (contact + downward force).</td></tr>
+              <tr><td><code>stacked_on</code></td><td><code>stacked_on(a, b)</code></td><td>Object <em>a</em> is resting on object <em>b</em>'s top surface.</td></tr>
             </tbody>
           </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
+          <p class="text-[13px] text-muted dark:text-d-muted">Tolerances default to physically reasonable values; override per-call if a task is unusually tight or loose.</p>
 
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
+          <h2 id="combinators">Combinators</h2>
+          <ul>
+            <li><code>and(p1, p2, …)</code> — all subpredicates must hold this step.</li>
+            <li><code>or(p1, p2, …)</code> — at least one subpredicate holds this step.</li>
+            <li><code>not(p)</code> — the subpredicate does not hold this step.</li>
+          </ul>
+          <p>Combinators arbitrarily nest. Short-circuit evaluation means an <code>and</code> stops at the first false atom.</p>
 
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
+          <h2 id="examples">Worked examples</h2>
+          <p><strong>Engaged grasp:</strong></p>
+          <pre class="code-block"><span class="c-str">grasped("cap")</span></pre>
 
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
+          <p><strong>Grasped <em>and</em> lifted:</strong></p>
+          <pre class="code-block"><span class="c-str">and(grasped("cap"), lifted("cap", height_m: 0.05))</span></pre>
 
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
+          <p><strong>Door open beyond 60°:</strong></p>
+          <pre class="code-block"><span class="c-str">joint_value("door", "&gt;", 1.047)</span>   <span class="c-comment"># radians</span></pre>
 
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
+          <p><strong>Block placed in container OR on the table:</strong></p>
+          <pre class="code-block"><span class="c-str">or(placed_in("block_a", "container"), stacked_on("block_a", "table"))</span></pre>
 
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
+          <p><strong>Released (post-engagement):</strong></p>
+          <pre class="code-block"><span class="c-str">not(grasped("cap"))</span></pre>
 
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
+          <h2 id="compile">How it compiles</h2>
+          <p><code>compile_predicate(expr, env)</code> returns a callable <code>fn(state) -&gt; bool</code>. It walks the AST once at graph-load time, binds each atom to its evaluator (which knows about the asset and the env), and short-circuits combinators. The result is cheap to evaluate every step of the rollout.</p>
+          <pre class="code-block"><span class="c-key">from</span> core.predicates <span class="c-key">import</span> compile_predicate
+
+fn = compile_predicate(<span class="c-str">'and(grasped("cap"), lifted("cap", height_m: 0.05))'</span>, env)
+<span class="c-key">while not</span> fn(env.state):
+    env.step(policy(env.state))</pre>
+
+          <h2 id="extending">Extending the DSL</h2>
+          <p>Adding a new atom is a single registration in <code>core.predicates</code>. Keep them small, observable, and asset-agnostic — the closed-set ethos applies here too. Compositional predicates that combine existing atoms should live in user YAML, not in the language.</p>
 
         </div>
 
         <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
+          <a href="../concepts/task_graphs.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Task graphs</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
+          </a><a href="../evaluation/understanding.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Understanding</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,12 +284,12 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#grammar" class="toc-item">Grammar</a>
+          <a href="#atoms" class="toc-item">The six atoms</a>
+          <a href="#combinators" class="toc-item">Combinators</a>
+          <a href="#examples" class="toc-item">Worked examples</a>
+          <a href="#compile" class="toc-item">How it compiles</a>
+          <a href="#extending" class="toc-item">Extending the DSL</a>
         </nav>
       </aside>
 

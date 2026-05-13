@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation · MetaFine User Guide</title>
-  <meta name="description" content="Installation — MetaFine user guide." />
+  <title>Results schema · MetaFine User Guide</title>
+  <meta name="description" content="Results schema — MetaFine user guide." />
 
   <link rel="icon" href="../../_images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -146,7 +146,7 @@
       <aside class="hidden lg:block col-span-3 sticky-side pt-8 pb-12">
         <div class="nav-section">Getting Started</div>
         <a href="../index.html" class="nav-item">Introduction</a>
-        <a href="../getting_started/installation.html" class="nav-item is-active">Installation</a>
+        <a href="../getting_started/installation.html" class="nav-item">Installation</a>
         <a href="../getting_started/quickstart.html" class="nav-item">Quickstart</a>
         <div class="nav-section">Core Concepts</div>
         <a href="../concepts/architecture.html" class="nav-item">Architecture</a>
@@ -159,7 +159,7 @@
         <a href="../evaluation/perception.html" class="nav-item">Perception</a>
         <a href="../evaluation/behavior.html" class="nav-item">Behavior</a>
         <a href="../evaluation/hybrid.html" class="nav-item">Real-sim hybrid (PPI)</a>
-        <a href="../evaluation/results_schema.html" class="nav-item">Results schema</a>
+        <a href="../evaluation/results_schema.html" class="nav-item is-active">Results schema</a>
         <div class="nav-section">Data Pipelines</div>
         <a href="../data/recording.html" class="nav-item">Recording</a>
         <a href="../data/replay.html" class="nav-item">Replay & merge</a>
@@ -188,87 +188,127 @@
 
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">
-          User Guide · Getting Started · Installation
+          User Guide · Evaluation · Results schema
         </div>
 
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">
-          Installation
+          Results schema
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          Set up MetaFine in a fresh conda environment, install assets, and verify everything is wired up — typically under 10 minutes on a clean Linux box.
+          Every diagnostic eval run emits a single results.json file. This is the field-by-field reference.
         </p>
 
         <div class="prose-doc mt-6">
 
-          <h2 id="requirements">System requirements</h2>
+          <h2 id="overview">Overview</h2>
+          <p>One <code>results.json</code> per eval run. Top-level keys are stable; nested fields under each diagnostic dimension are versioned by the <code>meta.version</code> field. Treat unknown keys as forward-compatible; never strip them on round-trip.</p>
+
+          <h2 id="top-level">Top-level layout</h2>
+          <pre class="code-block">{
+  <span class="c-key">"understanding"</span>: { ... },
+  <span class="c-key">"perception"</span>:    { ... },
+  <span class="c-key">"behavior"</span>:      { ... },
+  <span class="c-key">"meta"</span>:          { ... }
+}</pre>
+
+          <h2 id="understanding">understanding</h2>
           <table>
-            <thead><tr><th>Component</th><th>Required</th></tr></thead>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td>OS</td><td>Linux (Ubuntu 20.04 / 22.04 tested)</td></tr>
-              <tr><td>GPU</td><td>NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x)</td></tr>
-              <tr><td>Python</td><td>3.10 or 3.11</td></tr>
-              <tr><td>Disk</td><td>~3 GB for code + assets; per-policy checkpoints separate</td></tr>
+              <tr><td><code>per_stage_success</code></td><td><code>{stage_name: float}</code></td><td>Stage success rate over all eval episodes. Range [0, 1].</td></tr>
+              <tr><td><code>overall</code></td><td>float</td><td>Final-stage success rate; the headline U-axis number.</td></tr>
+              <tr><td><code>n_episodes</code></td><td>int</td><td>Total episodes in the U-axis aggregation.</td></tr>
+              <tr><td><code>stage_order</code></td><td>list[string]</td><td>Stage names in graph-declared order.</td></tr>
             </tbody>
           </table>
-          <p>MetaFine has been tested with <strong>SAPIEN 3.0.2</strong> and <strong>ManiSkill 3.0.0b22</strong> on driver 535.x. Other GPU / driver combinations are likely to work but are not currently exercised in CI.</p>
 
-          <h2 id="install-core">Install the simulation core</h2>
-          <p>Create a fresh conda env, clone the repository, and install in editable mode:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> conda create <span class="c-flag">-n</span> metafine python=3.10 <span class="c-flag">-y</span>
-<span class="c-prompt">$</span> conda activate metafine
+          <h2 id="perception">perception</h2>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>ausc</code></td><td><code>{axis: float}</code></td><td>Per-axis AUSC (area-under-success-curve), normalised [0, 1]. Axes: <code>light</code>, <code>view</code>, <code>rotation</code>.</td></tr>
+              <tr><td><code>overall</code></td><td>float</td><td>Mean of <code>ausc</code> values.</td></tr>
+              <tr><td><code>curve_points</code></td><td><code>{axis: [[x, y], ...]}</code></td><td>Raw success-vs-perturbation curve, normalised x axis ∈ [0, 1].</td></tr>
+              <tr><td><code>sweep_config</code></td><td>object</td><td>The <code>standard_dr_sweeps()</code> config used (max perturbation per axis, n_steps, episodes_per_step).</td></tr>
+            </tbody>
+          </table>
 
-<span class="c-prompt">$</span> git clone https://github.com/aatt523/FGManip.git metafine
-<span class="c-prompt">$</span> cd metafine
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .</pre>
-          <p>This pulls the 15 core runtime dependencies — <code>sapien</code>, <code>mani_skill</code>, <code>gymnasium</code>, <code>torch</code>, <code>h5py</code>, <code>pandas</code>, <code>tyro</code>, <code>trimesh</code>, <code>transforms3d</code>, <code>opencv-python</code>, <code>pyyaml</code>, <code>transformers</code>, and the numerical stack. The install is <em>editable</em>, so any code change in the repo is picked up live.</p>
+          <h2 id="behavior">behavior</h2>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>jerk_rms</code></td><td>float</td><td>End-effector jerk RMS in m/s³, averaged over successful episodes.</td></tr>
+              <tr><td><code>vel_var</code></td><td>float</td><td>Normalised velocity variance (dimensionless).</td></tr>
+              <tr><td><code>path_length_ratio</code></td><td>float</td><td>Actual path length / straight-line distance. ≥ 1.0.</td></tr>
+              <tr><td><code>joint_jerk_rms</code></td><td>float (optional)</td><td>Same metric in joint space; recommended for cross-policy comparisons.</td></tr>
+              <tr><td><code>frame_rate</code></td><td>float</td><td>Eval rollout frame rate in Hz (default 25). Required for cross-paper comparisons.</td></tr>
+              <tr><td><code>aggregation</code></td><td>string</td><td>One of <code>"success_only"</code> (default), <code>"all_episodes"</code>.</td></tr>
+            </tbody>
+          </table>
 
-          <h2 id="extras">Optional extras</h2>
-          <p>Two optional extras are declared in <code>pyproject.toml</code>:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[ai]"</span>     <span class="c-comment"># + openai client (AI planner path)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> <span class="c-str">".[dev]"</span>    <span class="c-comment"># + pytest for the test suite</span></pre>
-          <p>The <strong>per-policy VLA stacks</strong> are deliberately <em>not</em> in the core dep set — they pin conflicting <code>torch</code> / <code>transformers</code> versions. Install only the policies you need (see <a href="../policies/overview.html">Policies → Overview</a>).</p>
+          <h2 id="meta">meta</h2>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>version</code></td><td>string</td><td>Results-schema semver. Bumped on any breaking field change.</td></tr>
+              <tr><td><code>task_graph</code></td><td>string</td><td>Path to the YAML used for this run.</td></tr>
+              <tr><td><code>policy</code></td><td>string</td><td>Policy identifier (<code>pi05</code>, <code>openvla-oft</code>, …).</td></tr>
+              <tr><td><code>checkpoint</code></td><td>string</td><td>Checkpoint path or hash.</td></tr>
+              <tr><td><code>seed</code></td><td>int</td><td>Eval seed.</td></tr>
+              <tr><td><code>timestamp</code></td><td>string</td><td>ISO 8601.</td></tr>
+              <tr><td><code>commit</code></td><td>string</td><td>Git SHA of the MetaFine repo at eval time.</td></tr>
+            </tbody>
+          </table>
 
-          <h2 id="assets">Download assets</h2>
-          <p>The 40+ part-annotated articulated objects (PartNet-Mobility subset + custom URDFs) and the example task-graph YAMLs ship as a separate dataset so the source repo stays small. Pull from either mirror:</p>
-          <pre class="code-block"><span class="c-comment"># ModelScope</span>
-<span class="c-prompt">$</span> modelscope download <span class="c-flag">--dataset</span> your-handle/metafine
-
-<span class="c-comment"># Hugging Face</span>
-<span class="c-prompt">$</span> huggingface-cli download your-handle/metafine <span class="c-flag">--repo-type</span> dataset</pre>
-          <p>Unpack the archive next to the repo root so the resulting layout is <code>metafine/assets/&lt;asset_id&gt;/</code> and <code>metafine/configs/&lt;name&gt;.yaml</code>.</p>
-
-          <h2 id="policies">Per-policy stacks</h2>
-          <p>Every supported VLA backbone is a separately-installable subdirectory under <code>core/policies/</code>. Each has its own pinned dependencies — do not install more than you need:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05         <span class="c-comment"># π0.5</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla      <span class="c-comment"># OpenVLA</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft  <span class="c-comment"># OpenVLA-OFT</span>
-<span class="c-prompt">$</span> <span class="c-comment"># ... see core/policies/&lt;name&gt;/README.md for the rest</span></pre>
-
-          <h2 id="verify">Verify the install</h2>
-          <p>From anywhere on the host (not just the repo dir) the import + Gym registration should succeed:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python <span class="c-flag">-c</span> <span class="c-str">"import core.env, core.skill; \
-                  import gymnasium as gym; \
-                  env = gym.make('grasp_part'); \
-                  print('Ready:', type(env.unwrapped).__name__); env.close()"</span>
-<span class="c-comment"># → Ready: GraspPartEnv</span></pre>
-          <p>If you see <code>Ready: GraspPartEnv</code>, the simulation core, the skill registry, and the asset library are all wired up. Continue to <a href="quickstart.html">Quickstart</a>.</p>
+          <h2 id="sample">Sample output</h2>
+          <pre class="code-block">{
+  <span class="c-key">"understanding"</span>: {
+    <span class="c-key">"per_stage_success"</span>: { <span class="c-key">"engage"</span>: 0.93, <span class="c-key">"manipulate"</span>: 0.71, <span class="c-key">"release"</span>: 0.62 },
+    <span class="c-key">"overall"</span>: 0.62,
+    <span class="c-key">"n_episodes"</span>: 30,
+    <span class="c-key">"stage_order"</span>: [<span class="c-str">"engage"</span>, <span class="c-str">"manipulate"</span>, <span class="c-str">"release"</span>]
+  },
+  <span class="c-key">"perception"</span>: {
+    <span class="c-key">"ausc"</span>: { <span class="c-key">"light"</span>: 0.81, <span class="c-key">"view"</span>: 0.74, <span class="c-key">"rotation"</span>: 0.55 },
+    <span class="c-key">"overall"</span>: 0.70,
+    <span class="c-key">"curve_points"</span>: {
+      <span class="c-key">"light"</span>:    [[0,1.0],[0.2,0.97],[0.4,0.90],[0.6,0.83],[0.8,0.72],[1.0,0.55]],
+      <span class="c-key">"view"</span>:     [[0,1.0],[0.2,0.95],[0.4,0.83],[0.6,0.70],[0.8,0.58],[1.0,0.40]],
+      <span class="c-key">"rotation"</span>: [[0,1.0],[0.2,0.83],[0.4,0.60],[0.6,0.41],[0.8,0.30],[1.0,0.18]]
+    },
+    <span class="c-key">"sweep_config"</span>: { <span class="c-key">"n_steps"</span>: 6, <span class="c-key">"episodes_per_step"</span>: 20 }
+  },
+  <span class="c-key">"behavior"</span>: {
+    <span class="c-key">"jerk_rms"</span>: 0.082, <span class="c-key">"vel_var"</span>: 0.011, <span class="c-key">"path_length_ratio"</span>: 1.18,
+    <span class="c-key">"frame_rate"</span>: 25, <span class="c-key">"aggregation"</span>: <span class="c-str">"success_only"</span>
+  },
+  <span class="c-key">"meta"</span>: {
+    <span class="c-key">"version"</span>: <span class="c-str">"0.1.0"</span>,
+    <span class="c-key">"task_graph"</span>: <span class="c-str">"configs/grasp_and_lift_cap.yaml"</span>,
+    <span class="c-key">"policy"</span>: <span class="c-str">"pi05"</span>,
+    <span class="c-key">"checkpoint"</span>: <span class="c-str">"/nat/demos/pi05/run_2026_05_12/step_50000.pt"</span>,
+    <span class="c-key">"seed"</span>: 42,
+    <span class="c-key">"timestamp"</span>: <span class="c-str">"2026-05-13T14:30:11Z"</span>,
+    <span class="c-key">"commit"</span>: <span class="c-str">"5a6c780"</span>
+  }
+}</pre>
 
         </div>
 
         <nav class="mt-12 pt-6 hairline-t flex items-center gap-3 flex-wrap">
-          <a href="../index.html"
+          <a href="../evaluation/hybrid.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface">
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             <div>
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Previous</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Introduction</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Real-sim hybrid (PPI)</div>
             </div>
-          </a><a href="../getting_started/quickstart.html"
+          </a><a href="../data/recording.html"
              class="group inline-flex items-center gap-3 rounded-lg border border-hairline dark:border-white/10 px-4 py-3 hover:bg-soft dark:hover:bg-d-surface ml-auto">
             <div class="text-right">
               <div class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted dark:text-d-muted">Next</div>
-              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Quickstart</div>
+              <div class="text-[14px] font-medium text-ink dark:text-d-ink">Recording</div>
             </div>
             <svg class="h-4 w-4 text-muted dark:text-d-muted group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
@@ -278,12 +318,13 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#requirements" class="toc-item">System requirements</a>
-          <a href="#install-core" class="toc-item">Install the simulation core</a>
-          <a href="#extras" class="toc-item">Optional extras</a>
-          <a href="#assets" class="toc-item">Download assets</a>
-          <a href="#policies" class="toc-item">Per-policy stacks</a>
-          <a href="#verify" class="toc-item">Verify the install</a>
+          <a href="#overview" class="toc-item">Overview</a>
+          <a href="#top-level" class="toc-item">Top-level layout</a>
+          <a href="#understanding" class="toc-item">understanding</a>
+          <a href="#perception" class="toc-item">perception</a>
+          <a href="#behavior" class="toc-item">behavior</a>
+          <a href="#meta" class="toc-item">meta</a>
+          <a href="#sample" class="toc-item">Sample output</a>
         </nav>
       </aside>
 
