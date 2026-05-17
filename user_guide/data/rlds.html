@@ -159,45 +159,41 @@
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">User Guide · Data Pipelines · RLDS export</div>
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">RLDS export</h1>
-        <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">Some VLA stacks — most notably <strong class="text-ink dark:text-d-ink font-medium">OpenVLA</strong> / <strong class="text-ink dark:text-d-ink font-medium">OpenVLA-OFT</strong> — consume the <code class="font-mono">RLDS</code> / TFDS format rather than LeRobot. The <code class="font-mono">utils.export_rlds</code> converter mirrors the LeRobot pipeline but emits TFRecord shards with the RLDS step / episode schema.</p>
+        <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">Some VLA stacks — most notably <strong class="text-ink dark:text-d-ink font-medium">OpenVLA</strong> / <strong class="text-ink dark:text-d-ink font-medium">OpenVLA-OFT</strong> — consume the <code class="font-mono">RLDS</code> / TFDS format rather than LeRobot. <code class="font-mono">utils/convert_to_rlds.py</code> scans recorded trajectory dirs and emits a TFDS-style RLDS dataset.</p>
 
         <div class="prose-doc mt-8">
 
-          <h2 id="convert">Convert a demo tree</h2>
+          <h2 id="convert">Convert recorded trajectories</h2>
           <p>
-            Same input contract as the LeRobot path: point <code>--demos</code> at any subtree of <code>demos/</code>. The converter writes a TFDS builder layout under <code>--output</code> — one <code>features.json</code> plus per-shard <code>tfrecord</code> files.
+            <code>-i/--input-dirs</code> takes one or more directories to scan (by <code>-p/--pattern</code>); <code>-o/--output-dir</code> is where the RLDS dataset is written.
           </p>
-          <pre class="code-block my-4"><span class="c-comment"># Convert long-horizon demos to an RLDS dataset on disk</span>
-<span class="c-prompt">$</span> python <span class="c-flag">-m</span> utils.export_rlds \
-    <span class="c-flag">--demos</span> demos/lid_then_rotate/ \
-    <span class="c-flag">--output</span> datasets/metafine_lid_then_rotate_rlds \
-    <span class="c-flag">--dataset-name</span> <span class="c-str">metafine_lid_then_rotate</span></pre>
+          <pre class="code-block my-4"><span class="c-prompt">$</span> python utils/convert_to_rlds.py \
+    <span class="c-flag">-i</span> demos/grasp_part/100221 \
+    <span class="c-flag">-o</span> demos/datasets/rlds \
+    <span class="c-flag">--dataset-name</span> grasp_part_rlds \
+    <span class="c-flag">--image-size</span> 256</pre>
 
-          <h2 id="schema">RLDS step schema</h2>
-          <p>Each step in the resulting dataset carries the standard RLDS fields:</p>
+          <h2 id="flags">Flags</h2>
           <table class="ref-table">
-            <thead><tr><th>Field</th><th>Dtype / shape</th></tr></thead>
+            <thead><tr><th>Flag</th><th>Default</th><th>Notes</th></tr></thead>
             <tbody>
-              <tr><td><code>observation/image</code></td><td><code>uint8 [H, W, 3]</code></td></tr>
-              <tr><td><code>observation/state</code></td><td><code>float32 [D_state]</code></td></tr>
-              <tr><td><code>action</code></td><td><code>float32 [D_action]</code></td></tr>
-              <tr><td><code>reward</code></td><td><code>float32</code></td></tr>
-              <tr><td><code>discount</code></td><td><code>float32</code></td></tr>
-              <tr><td><code>is_first</code> / <code>is_last</code> / <code>is_terminal</code></td><td><code>bool</code></td></tr>
-              <tr><td><code>language_instruction</code></td><td><code>string</code> — drawn from the task-graph YAML</td></tr>
+              <tr><td><code>-i</code>, <code>--input-dirs</code></td><td>— (required)</td><td>One or more dirs to scan for trajectories</td></tr>
+              <tr><td><code>-o</code>, <code>--output-dir</code></td><td><code>/nat/demos/datasets/rlds</code></td><td>RLDS dataset output dir</td></tr>
+              <tr><td><code>--dataset-name</code></td><td><code>fgmanip_rlds</code></td><td>TFDS dataset name</td></tr>
+              <tr><td><code>--image-size</code></td><td><code>256</code></td><td>Square image resize</td></tr>
+              <tr><td><code>--val-ratio</code></td><td><code>0.0</code></td><td>Validation split fraction</td></tr>
+              <tr><td><code>--all-episodes</code></td><td>off</td><td>Include non-successful episodes too</td></tr>
+              <tr><td><code>--max-episodes</code></td><td><code>0</code></td><td>Cap episodes (0 = no cap)</td></tr>
+              <tr><td><code>-p</code>, <code>--pattern</code></td><td>replay pattern</td><td>Filename pattern to collect</td></tr>
+              <tr><td><code>--seed</code></td><td><code>42</code></td><td>Split shuffle seed</td></tr>
             </tbody>
           </table>
 
           <h2 id="openvla">Use with OpenVLA / OpenVLA-OFT</h2>
           <p>
-            Point the OpenVLA training config at the output directory; both <a href="../policies/openvla.html">OpenVLA and OpenVLA-OFT</a> consume the resulting <code>RLDS</code> shards directly. Mixing MetaFine RLDS shards with OXE / OpenX-style datasets is the recommended path for joint pretraining + fine-tune runs.
+            Point the OpenVLA training config at <code>--output-dir</code>; both <a href="../policies/openvla.html">OpenVLA and OpenVLA-OFT</a> consume RLDS shards directly. Mixing MetaFine RLDS with OXE / OpenX-style datasets is the usual path for joint pretrain + fine-tune runs.
           </p>
-          <pre class="code-block my-4"><span class="c-comment"># Minimal OpenVLA-OFT config snippet</span>
-<span class="c-comment">data:
-&nbsp; - name: metafine_lid_then_rotate
-&nbsp;   data_dir: datasets/metafine_lid_then_rotate_rlds
-&nbsp;   weight: 1.0</span></pre>
-          <p class="text-[13px] text-muted dark:text-d-muted">Canonical source: <code>python -m utils.export_rlds --help</code>.</p>
+          <p class="text-[13px] text-muted dark:text-d-muted">Canonical source: <code>python utils/convert_to_rlds.py --help</code>.</p>
 
         </div>
 
@@ -222,8 +218,8 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#convert" class="toc-item">Convert a demo tree</a>
-          <a href="#schema" class="toc-item">RLDS step schema</a>
+          <a href="#convert" class="toc-item">Convert recorded trajectories</a>
+          <a href="#flags" class="toc-item">Flags</a>
           <a href="#openvla" class="toc-item">Use with OpenVLA / OpenVLA-OFT</a>
         </nav>
       </aside>

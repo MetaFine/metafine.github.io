@@ -202,64 +202,66 @@
         </h1>
 
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          <code class="font-mono">record.py</code> is the single entrypoint for generating expert demonstrations. It runs an <strong class="text-ink dark:text-d-ink font-medium">MP-based solver</strong> (motion planning + scripted skill controllers) inside the SAPIEN simulator, then dumps successful episodes as HDF5 trajectories paired with video. Two modes: <em>single-skill</em> for atomic-skill data, <em>--task-graph</em> for full compositional tasks.
+          <code class="font-mono">record.py</code> is the single entrypoint for generating expert demonstrations. It runs an <strong class="text-ink dark:text-d-ink font-medium">MP-based solver</strong> (motion planning + scripted skill controllers) inside the SAPIEN simulator, then writes successful episodes to an HDF5 trajectory paired with video. Two modes: <em>single-skill</em> (an atomic-skill env) and <em>--task-graph</em> (a multi-stage / multi-task env).
         </p>
 
         <div class="prose-doc mt-8">
 
           <h2 id="single-skill">Single-skill mode</h2>
           <p>
-            Use this mode when you want to collect demos for one atomic skill against one asset — typical for pre-training or skill-level ablations. Supply <code>--task</code> (one of the 21 skill names) and <code>--object</code> (the asset id). The expert MP-solver figures out the correct part to act on by querying the asset's <code>capabilities.json</code>.
+            Collect demos for one atomic-skill env against one asset/part — typical for skill-level data or ablations. Supply <code>-e/--env-id</code> (a registered env id), <code>--object-name</code> (the asset id) and <code>--part-name</code> (the target part). <code>--only-count-success</code> keeps generating until <code>-n</code> successful trajectories are written.
           </p>
-          <pre class="code-block my-4"><span class="c-comment"># Record 20 grasps on asset 100221, save to demos/grasp_part/100221/</span>
-<span class="c-prompt">$</span> python record.py <span class="c-flag">--task</span> grasp_part <span class="c-flag">--object</span> 100221 <span class="c-flag">--trials</span> 20
+          <pre class="code-block my-4"><span class="c-comment"># Record 5 successful grasps on asset 100221's "cap" part</span>
+<span class="c-prompt">$</span> python record.py <span class="c-flag">-e</span> grasp_part <span class="c-flag">--object-name</span> 100221 <span class="c-flag">--part-name</span> cap <span class="c-flag">-n</span> 5 <span class="c-flag">--only-count-success</span>
 
-<span class="c-comment"># Headed mode + custom seed for reproducibility</span>
-<span class="c-prompt">$</span> python record.py <span class="c-flag">--task</span> press <span class="c-flag">--object</span> 103594 \
-    <span class="c-flag">--trials</span> 10 <span class="c-flag">--seed</span> 42 <span class="c-flag">--render-mode</span> human</pre>
+<span class="c-comment"># Open the SAPIEN viewer + ray-traced shader for inspection</span>
+<span class="c-prompt">$</span> python record.py <span class="c-flag">-e</span> toggle_switch <span class="c-flag">--object-name</span> 100920 <span class="c-flag">--part-name</span> switch \
+    <span class="c-flag">-n</span> 5 <span class="c-flag">--vis</span> <span class="c-flag">--shader</span> rt-fast</pre>
 
           <h2 id="task-graph">--task-graph mode</h2>
           <p>
-            For compositional tasks, point <code>--task-graph</code> at a YAML chain. Each node is a skill call against a named asset/part; predicate goals are evaluated after the final node to decide if the episode counts as a success. Only <em>successful</em> trajectories are written to disk.
+            For compositional tasks, point <code>--task-graph</code> at a YAML chain (this drives a multi-stage / multi-task env). Each stage is a skill call against a named asset/part; per-stage predicates decide success. Only <em>successful</em> trajectories are kept when <code>--only-count-success</code> is set.
           </p>
-          <pre class="code-block my-4"><span class="c-comment"># Record 30 successful long-horizon "open lid → rotate inner part" demos</span>
-<span class="c-prompt">$</span> python record.py <span class="c-flag">--task-graph</span> configs/lid_then_rotate.yaml <span class="c-flag">--trials</span> 30
+          <pre class="code-block my-4"><span class="c-comment"># Record 5 successful "grasp + lift cap" composite demos</span>
+<span class="c-prompt">$</span> python record.py <span class="c-flag">--task-graph</span> configs/example_grasp_cap.yaml <span class="c-flag">-n</span> 5 <span class="c-flag">--only-count-success</span>
 
-<span class="c-comment"># Custom output dir + bumped MP horizon for longer chains</span>
-<span class="c-prompt">$</span> python record.py <span class="c-flag">--task-graph</span> configs/peg_in_hole.yaml \
-    <span class="c-flag">--trials</span> 50 <span class="c-flag">--max-steps</span> 600 <span class="c-flag">--output</span> demos/peg_in_hole_v2/</pre>
+<span class="c-comment"># Custom output dir; CPU multiprocessing for faster collection</span>
+<span class="c-prompt">$</span> python record.py <span class="c-flag">--task-graph</span> configs/lid_opening_100221.yaml \
+    <span class="c-flag">-n</span> 50 <span class="c-flag">--record-dir</span> demos/lid_v2 <span class="c-flag">--num-procs</span> 4 <span class="c-flag">-b</span> physx_cpu</pre>
 
           <h2 id="solver">How the expert solver works</h2>
           <p>
-            Each atomic skill is paired with a scripted controller that uses motion planning for free-space motion and pre-programmed contact-phase trajectories for the engagement step. The solver is deterministic given a seed, so re-running with the same <code>--seed</code> reproduces the exact trajectory. Failure cases (e.g. unreachable target, IK fail) are silently retried until <code>--trials</code> successes are written.
+            Each atomic skill is paired with a scripted controller that uses motion planning for free-space motion and pre-programmed contact-phase trajectories for the engagement step. Failure cases (unreachable target, IK fail, predicate not met) are retried; with <code>--only-count-success</code> the recorder keeps going until <code>-n</code> successes land on disk.
           </p>
 
           <h2 id="output">Output layout</h2>
-          <p>Each call produces a per-task / per-object folder under <code>demos/</code>:</p>
+          <p>Each call writes one HDF5 trajectory (all episodes inside) plus videos under <code>--record-dir</code> (default <code>demos/</code>), named by <code>--traj-name</code> (default <code>trajectory</code>):</p>
           <pre class="code-block my-4"><span class="c-comment">demos/
-&nbsp; grasp_part/
-&nbsp;   100221/
-&nbsp;     ep_0.h5        # observation/action streams + final predicate state
-&nbsp;     ep_0.mp4       # third-person rollout video
-&nbsp;     ep_1.h5
-&nbsp;     ep_1.mp4
-&nbsp;     ...</span></pre>
+&nbsp; &lt;env&gt;/&lt;object&gt;/
+&nbsp;   trajectory.h5      # ManiSkill RecordEpisode HDF5 (actions + env states)
+&nbsp;   trajectory.json    # episode metadata (env id, asset, control mode, …)
+&nbsp;   videos/ *.mp4      # third-person rollout videos for visual QA</span></pre>
           <p>
-            Each <code>ep_*.h5</code> is a flat HDF5 with arrays for <code>observation.image</code>, <code>observation.state</code>, <code>action</code>, plus a small attribute dict (task name, asset id, seed, skill phase boundaries). The MP4 is third-person at 30 FPS for visual QA — feed it to <a href="replay.html"><code>utils.replay</code></a> when you need to walk the trajectory step-by-step.
+            Recording stores <strong>actions + env states only</strong> — observations (images / proprio) are rendered later by <a href="replay.html">replay</a>, which is what downstream training consumes. Run <a href="replay.html">merge then replay</a> before converting.
           </p>
 
           <h2 id="flag-summary">Common flags</h2>
           <table class="ref-table">
             <thead><tr><th>Flag</th><th>Default</th><th>Notes</th></tr></thead>
             <tbody>
-              <tr><td><code>--task</code></td><td>—</td><td>Atomic skill name (mutually exclusive with <code>--task-graph</code>)</td></tr>
-              <tr><td><code>--task-graph</code></td><td>—</td><td>Path to a task-graph YAML</td></tr>
-              <tr><td><code>--object</code></td><td>—</td><td>Asset id (required in single-skill mode)</td></tr>
-              <tr><td><code>--trials</code></td><td>1</td><td>Number of successful episodes to write</td></tr>
-              <tr><td><code>--seed</code></td><td>0</td><td>Base seed; per-episode seeds are <code>seed + idx</code></td></tr>
-              <tr><td><code>--max-steps</code></td><td>400</td><td>Per-episode simulator step budget</td></tr>
-              <tr><td><code>--render-mode</code></td><td><code>rgb_array</code></td><td><code>human</code> opens the SAPIEN viewer</td></tr>
-              <tr><td><code>--output</code></td><td><code>demos/</code></td><td>Override the output root</td></tr>
+              <tr><td><code>-e</code>, <code>--env-id</code></td><td><code>peg_in_hole</code></td><td>Registered env id (single-skill mode)</td></tr>
+              <tr><td><code>--object-name</code></td><td><code>100937</code></td><td>Asset id</td></tr>
+              <tr><td><code>--part-name</code></td><td><code>button</code></td><td>Target part on the asset</td></tr>
+              <tr><td><code>--task-graph</code></td><td>—</td><td>Path to a task-graph YAML (composite / multi-task mode)</td></tr>
+              <tr><td><code>-n</code>, <code>--num-traj</code></td><td><code>5</code></td><td>Number of trajectories to generate</td></tr>
+              <tr><td><code>--only-count-success</code></td><td>off</td><td>Keep generating until <code>-n</code> successes; only save successes</td></tr>
+              <tr><td><code>-b</code>, <code>--sim-backend</code></td><td><code>auto</code></td><td><code>auto</code> / <code>physx_cpu</code> / <code>gpu</code></td></tr>
+              <tr><td><code>--render-mode</code></td><td><code>rgb_array</code></td><td><code>rgb_array</code> or <code>sensors</code> (affects saved video)</td></tr>
+              <tr><td><code>--vis</code></td><td>off</td><td>Open the SAPIEN GUI to watch live</td></tr>
+              <tr><td><code>--shader</code></td><td><code>default</code></td><td><code>default</code> (fast) · <code>rt</code> / <code>rt-fast</code> (ray-traced)</td></tr>
+              <tr><td><code>--record-dir</code></td><td><code>demos</code></td><td>Output root</td></tr>
+              <tr><td><code>--traj-name</code></td><td><code>trajectory</code></td><td>Base name of the <code>.h5</code></td></tr>
+              <tr><td><code>--num-procs</code></td><td><code>1</code></td><td>CPU multiprocessing (CPU backend only)</td></tr>
             </tbody>
           </table>
           <p class="text-[13px] text-muted dark:text-d-muted">Canonical source: <code>python record.py --help</code>.</p>

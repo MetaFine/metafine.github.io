@@ -159,63 +159,56 @@
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">User Guide · Policies · Overview</div>
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">Policies overview</h1>
-        <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">MetaFine ships first-class support for <strong class="text-ink dark:text-d-ink font-medium">seven VLA backbones</strong>. After the recent task-graph refactor, <em>all seven</em> consume the same <code class="font-mono">--task-graph</code> entrypoint and emit the same <code class="font-mono">results.json</code>. Each lives at <code class="font-mono">core/policies/&lt;name&gt;</code>, installed separately via its own <code class="font-mono">pyproject.toml</code>.</p>
+        <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">MetaFine vendors <strong class="text-ink dark:text-d-ink font-medium">seven VLA backbones</strong> under <code class="font-mono">core/policies/&lt;name&gt;</code>, each a self-contained subpackage installed separately. The <strong class="text-ink dark:text-d-ink font-medium">verified training paths are LeRobot and StarVLA</strong>; π0.5 closed-loop inference in the simulator is verified. Every backbone has its own <code class="font-mono">evaluate.py</code> + <code class="font-mono">README.md</code> documenting its exact flags.</p>
 
         <div class="prose-doc mt-8">
 
-          <h2 id="supported">Supported backbones</h2>
+          <h2 id="supported">Vendored backbones</h2>
           <table class="ref-table">
-            <thead><tr><th>Backbone</th><th>Package path</th><th><code>--task-graph</code></th><th>Page</th></tr></thead>
+            <thead><tr><th>Backbone</th><th>Package path</th><th>Status</th><th>Page</th></tr></thead>
             <tbody>
-              <tr><td>ACT</td><td><code>core/policies/act</code></td><td>yes</td><td><a href="act.html">ACT</a></td></tr>
-              <tr><td>DP3</td><td><code>core/policies/dp3</code></td><td>yes</td><td><a href="dp3.html">DP3</a></td></tr>
-              <tr><td>OpenVLA</td><td><code>core/policies/openvla</code></td><td>yes</td><td><a href="openvla.html">OpenVLA / OFT</a></td></tr>
-              <tr><td>OpenVLA-OFT</td><td><code>core/policies/openvla_oft</code></td><td>yes</td><td><a href="openvla.html">OpenVLA / OFT</a></td></tr>
-              <tr><td>π0</td><td><code>core/policies/pi0</code></td><td>yes</td><td><a href="pi0.html">π0 / π0.5</a></td></tr>
-              <tr><td>π0.5</td><td><code>core/policies/pi05</code></td><td>yes</td><td><a href="pi0.html">π0 / π0.5</a></td></tr>
-              <tr><td>StarVLA</td><td><code>core/policies/starvla</code></td><td>yes</td><td><a href="starvla.html">StarVLA</a></td></tr>
+              <tr><td>π0.5</td><td><code>core/policies/pi05</code></td><td>infer verified</td><td><a href="pi0.html">π0 / π0.5</a></td></tr>
+              <tr><td>StarVLA</td><td><code>core/policies/starvla</code></td><td>training verified</td><td><a href="starvla.html">StarVLA</a></td></tr>
+              <tr><td>π0</td><td><code>core/policies/pi0</code></td><td>vendored</td><td><a href="pi0.html">π0 / π0.5</a></td></tr>
+              <tr><td>ACT</td><td><code>core/policies/act</code></td><td>vendored</td><td><a href="act.html">ACT</a></td></tr>
+              <tr><td>DP3</td><td><code>core/policies/diffusion_policy_3d</code></td><td>vendored</td><td><a href="dp3.html">DP3</a></td></tr>
+              <tr><td>OpenVLA</td><td><code>core/policies/openvla</code></td><td>vendored</td><td><a href="openvla.html">OpenVLA / OFT</a></td></tr>
+              <tr><td>OpenVLA-OFT</td><td><code>core/policies/openvla-oft</code></td><td>vendored</td><td><a href="openvla.html">OpenVLA / OFT</a></td></tr>
             </tbody>
           </table>
-          <p>Each backbone is vendored as a self-contained subpackage; install only the ones you need:</p>
+          <p>"vendored" = the upstream code ships in-tree and installs, but the train/eval path hasn't been validated end-to-end inside MetaFine yet. Treat those as starting points, not turnkey.</p>
           <pre class="code-block my-4"><span class="c-comment"># Base MetaFine</span>
 <span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> .
 
-<span class="c-comment"># A specific policy (and its native deps)</span>
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/dp3
-<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla_oft</pre>
+<span class="c-comment"># A specific policy + its native deps (conflicting pins → install in isolation)</span>
+<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/pi05
+<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft</pre>
 
-          <h2 id="adapter">The 3-function adapter pattern</h2>
-          <p>
-            To plug a backbone into MetaFine's record → diagnostic-eval loop, every <code>core/policies/&lt;name&gt;/evaluate.py</code> exposes the same three functions. That's the entire contract — the framework handles env construction, task-graph stepping, DR sweeps, and smoothness logging.
-          </p>
+          <h2 id="training">Training</h2>
+          <p>Training runs inside the policy's own framework — there is no universal trainer. Two verified paths consume a <a href="../data/lerobot.html">LeRobot</a> dataset:</p>
           <ul>
-            <li><code>load_model(checkpoint_path, device) → model</code> — hydrate weights, return an opaque object the other two functions accept.</li>
-            <li><code>predict(model, observation, instruction) → action</code> — one observation in, one action (or action chunk) out. Called every env step.</li>
-            <li><code>finalize(model)</code> — release GPU memory, close any open files. Called once after the eval loop.</li>
+            <li><strong>LeRobot</strong> — feed the <code>convert_to_lerobot</code> output directory to the standard LeRobot training pipeline.</li>
+            <li><strong>StarVLA</strong> — place the dataset under <code>core/policies/starvla/starVLA/playground/Dataset/</code>, register it in <code>dataloader/gr00t_lerobot/mixtures.py</code>; StarVLA expects LeRobot&nbsp;2.1 (convert a 3.0 dataset with <code>lerobot_v30_to_v21</code> + add <code>modality.json</code>), then <code>bash run_libero_train.sh</code>. See <code>core/policies/starvla/train/README.md</code>.</li>
           </ul>
-          <pre class="code-block my-4"><span class="c-comment"># Minimal sketch — see policies/adding.html for the full walkthrough</span>
-def load_model(checkpoint_path, device):
-    model = MyVLA.from_pretrained(checkpoint_path).to(device)
-    model.eval()
-    return model
 
-def predict(model, observation, instruction):
-    with torch.no_grad():
-        return model.act(observation, instruction).cpu().numpy()
-
-def finalize(model):
-    del model
-    torch.cuda.empty_cache()</pre>
-
-          <h2 id="cli">Common CLI</h2>
-          <p>Every policy ships the same evaluation entrypoint, parameterised by checkpoint and task graph:</p>
-          <pre class="code-block my-4"><span class="c-prompt">$</span> python core/policies/&lt;name&gt;/evaluate.py \
-    <span class="c-flag">--task-graph</span> configs/example_grasp_cap.yaml \
-    <span class="c-flag">--checkpoint</span> /path/to/ckpt \
-    <span class="c-flag">--episodes</span> 30 \
-    <span class="c-flag">--dr-sweep</span> standard \
-    <span class="c-flag">--smoothness</span></pre>
-          <p>That single command emits the three-dimensional <a href="../evaluation/results_schema.html"><code>results.json</code></a> regardless of which backbone is loaded.</p>
+          <h2 id="eval">Evaluation / inference</h2>
+          <p>
+            Each backbone has its own <code>evaluate.py</code> (standalone argparse) — there is <em>no</em> shared <code>--task-graph</code> adapter. Flags are documented in <code>core/policies/&lt;name&gt;/README.md</code>. The π0.5 example:
+          </p>
+          <pre class="code-block my-4"><span class="c-prompt">$</span> python core/policies/pi05/evaluate.py \
+    <span class="c-flag">--policy-path</span> /path/to/pretrained_model \
+    <span class="c-flag">--env-id</span> grasp_part \
+    <span class="c-flag">--object-name</span> 100221 \
+    <span class="c-flag">--part-name</span> cap \
+    <span class="c-flag">--obs-mode</span> rgb \
+    <span class="c-flag">--control-mode</span> pd_joint_delta_pos \
+    <span class="c-flag">--n-episodes</span> 50 \
+    <span class="c-flag">--device</span> cuda \
+    <span class="c-flag">--task</span> <span class="c-str">"Grasp the cap of the bottle."</span> \
+    <span class="c-flag">--record-dir</span> eval_out <span class="c-flag">--save-video</span></pre>
+          <p>
+            For the staged diagnostic (semantic-intervention / object-swap — the protocol behind the <a href="../evaluation/understanding.html">Understanding</a> axis), each backbone provides a wrapper, e.g. <code>bash core/policies/pi05/run_eval_three_stage.sh</code>.
+          </p>
 
         </div>
 
@@ -240,9 +233,9 @@ def finalize(model):
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#supported" class="toc-item">Supported backbones</a>
-          <a href="#adapter" class="toc-item">The 3-function adapter pattern</a>
-          <a href="#cli" class="toc-item">Common CLI</a>
+          <a href="#supported" class="toc-item">Vendored backbones</a>
+          <a href="#training" class="toc-item">Training</a>
+          <a href="#eval" class="toc-item">Evaluation / inference</a>
         </nav>
       </aside>
     </div>

@@ -163,94 +163,19 @@
 
         <div class="prose-doc mt-8">
 
-          <h2 id="layout">Subpackage layout</h2>
-          <p>Drop a new directory under <code>core/policies/</code>:</p>
-          <pre class="code-block my-4"><span class="c-comment">core/policies/my_vla/
-&nbsp; pyproject.toml          # declares your subpackage + its native deps
-&nbsp; my_vla/
-&nbsp;   __init__.py
-&nbsp;   model.py              # your model class
-&nbsp; evaluate.py             # the 3-function contract (see below)
-&nbsp; train.py                # optional, but recommended</span></pre>
+          <h2 id="reality">How policies actually plug in</h2>
+          <p>There is <strong>no universal adapter or "3-function contract"</strong>. Each backbone is a self-contained subpackage under <code>core/policies/&lt;name&gt;</code> with its own <code>pyproject.toml</code>, its own (often conflicting) dependency pins, and its own standalone <code>evaluate.py</code> (plain argparse) plus a <code>README.md</code> documenting that backbone's exact flags.</p>
 
-          <h2 id="skeleton">The evaluate.py skeleton</h2>
-          <p>
-            The framework imports <code>load_model</code>, <code>predict</code>, and <code>finalize</code> from <code>evaluate.py</code> — no class, no registration boilerplate. The CLI argument parsing, env construction, task-graph stepping, DR loop, and smoothness logging are all provided by <code>utils.eval_setup.make_eval_env</code> + <code>utils.eval_sweep.dr_sweep</code>.
-          </p>
-          <pre class="code-block my-4"><span class="c-comment"># core/policies/my_vla/evaluate.py</span>
-import argparse, json, torch
-from utils.eval_setup import make_eval_env
-from utils.eval_sweep import dr_sweep, standard_dr_sweeps
-from utils.eval_metrics import EvalSummary, compute_smoothness
+          <h2 id="steps">Adding one</h2>
+          <ol>
+            <li>Vendor the upstream policy code under <code>core/policies/&lt;name&gt;/</code> with a <code>pyproject.toml</code> so <code>pip install -e core/policies/&lt;name&gt;</code> works in isolation.</li>
+            <li>Feed it MetaFine data via the standard pipeline — convert to <a href="../data/lerobot.html">LeRobot</a> or <a href="../data/rlds.html">RLDS</a> depending on what the backbone expects.</li>
+            <li>Write an <code>evaluate.py</code> that builds a MetaFine env with <code>gym.make(&lt;env_id&gt;)</code> (the registered env ids — see <a href="../reference/tasks.html">Task catalogue</a>), runs the policy closed-loop, and reports success / metrics.</li>
+            <li>Write a short <code>core/policies/&lt;name&gt;/README.md</code> documenting the exact train + eval commands.</li>
+          </ol>
 
-from my_vla.model import MyVLA
-
-<span class="c-comment"># ── 1) load_model ────────────────────────────────────────</span>
-def load_model(checkpoint_path, device):
-    model = MyVLA.from_pretrained(checkpoint_path).to(device)
-    model.eval()
-    return model
-
-<span class="c-comment"># ── 2) predict ───────────────────────────────────────────</span>
-def predict(model, observation, instruction):
-    <span class="c-comment"># observation is a dict: image, state, point_cloud (if requested)</span>
-    with torch.no_grad():
-        action = model.act(observation, instruction)
-    return action.cpu().numpy()
-
-<span class="c-comment"># ── 3) finalize ──────────────────────────────────────────</span>
-def finalize(model):
-    del model
-    torch.cuda.empty_cache()
-
-<span class="c-comment"># ── CLI plumbing — same shape for every backbone ─────────</span>
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument(<span class="c-str">"--task-graph"</span>, required=<span class="c-str">True</span>)
-    p.add_argument(<span class="c-str">"--checkpoint"</span>, required=<span class="c-str">True</span>)
-    p.add_argument(<span class="c-str">"--episodes"</span>, type=int, default=30)
-    p.add_argument(<span class="c-str">"--dr-sweep"</span>, default=None)
-    p.add_argument(<span class="c-str">"--smoothness"</span>, action=<span class="c-str">"store_true"</span>)
-    args = p.parse_args()
-
-    model = load_model(args.checkpoint, <span class="c-str">"cuda"</span>)
-    summary = EvalSummary()
-
-    <span class="c-comment"># Understanding + Behavior</span>
-    env = make_eval_env(args.task_graph)
-    summary.understanding = env.run(model, predict,
-                                    episodes=args.episodes,
-                                    record_smoothness=args.smoothness)
-
-    <span class="c-comment"># Perception (DR-AUSC)</span>
-    if args.dr_sweep:
-        summary.perception = dr_sweep(env, model, predict,
-                                      sweeps=standard_dr_sweeps(),
-                                      episodes=args.episodes)
-
-    finalize(model)
-    json.dump(summary.to_dict(), open(<span class="c-str">"results.json"</span>, <span class="c-str">"w"</span>), indent=2)
-
-if __name__ == <span class="c-str">"__main__"</span>:
-    main()</pre>
-
-          <h2 id="install">Install your subpackage</h2>
-          <pre class="code-block my-4"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/my_vla</pre>
-
-          <h2 id="run">Run the diagnostic eval</h2>
-          <p>That's it. Your policy now plays by every MetaFine convention:</p>
-          <pre class="code-block my-4"><span class="c-prompt">$</span> python core/policies/my_vla/evaluate.py \
-    <span class="c-flag">--task-graph</span> configs/example_grasp_cap.yaml \
-    <span class="c-flag">--checkpoint</span> checkpoints/my_vla/last.ckpt \
-    <span class="c-flag">--episodes</span> 30 <span class="c-flag">--dr-sweep</span> standard <span class="c-flag">--smoothness</span></pre>
-
-          <h2 id="checklist">Checklist</h2>
-          <ul>
-            <li>Subpackage at <code>core/policies/&lt;name&gt;/</code> with its own <code>pyproject.toml</code>.</li>
-            <li><code>evaluate.py</code> exposes <code>load_model</code>, <code>predict</code>, <code>finalize</code>.</li>
-            <li>Data path documented (LeRobot / RLDS / HDF5 / point-cloud).</li>
-            <li>Smoke-test a 5-episode eval on the canonical <code>configs/example_grasp_cap.yaml</code>.</li>
-          </ul>
+          <h2 id="reference">Reference implementation</h2>
+          <p>Copy the structure of <code>core/policies/pi05</code> — it has a clean <code>evaluate.py</code> (argparse), a <code>run_eval_three_stage.sh</code> staged-diagnostic wrapper, and a thorough <code>README.md</code>. <code>core/policies/starvla</code> is the reference for the training side.</p>
 
         </div>
 
@@ -275,11 +200,9 @@ if __name__ == <span class="c-str">"__main__"</span>:
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#layout" class="toc-item">Subpackage layout</a>
-          <a href="#skeleton" class="toc-item">The evaluate.py skeleton</a>
-          <a href="#install" class="toc-item">Install your subpackage</a>
-          <a href="#run" class="toc-item">Run the diagnostic eval</a>
-          <a href="#checklist" class="toc-item">Checklist</a>
+          <a href="#reality" class="toc-item">How policies plug in</a>
+          <a href="#steps" class="toc-item">Adding one</a>
+          <a href="#reference" class="toc-item">Reference implementation</a>
         </nav>
       </aside>
     </div>

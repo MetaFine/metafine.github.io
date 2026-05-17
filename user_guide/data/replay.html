@@ -160,49 +160,55 @@
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">User Guide · Data Pipelines · Replay &amp; merge</div>
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">Replay &amp; merge</h1>
         <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">
-          After recording, the <code class="font-mono">utils.replay</code> module rehydrates an HDF5 trajectory inside the SAPIEN viewer (step-by-step or full-speed), and offers shard-merging helpers for the multi-asset / multi-seed datasets that VLA training consumes.
+          Recording writes actions + env states only. Before training you <strong class="text-ink dark:text-d-ink font-medium">merge</strong> the raw shards into one HDF5, then <strong class="text-ink dark:text-d-ink font-medium">replay</strong> it to render observations under a chosen obs / control / backend. The replayed file is what the converters consume.
         </p>
 
         <div class="prose-doc mt-8">
-          <h2 id="visual-replay">Visual replay</h2>
+          <h2 id="merge">Step A — Merge trajectory shards</h2>
           <p>
-            Open any <code>ep_*.h5</code> in the SAPIEN viewer and step through the action sequence. Useful for QA after recording a fresh batch, and for diagnosing IK glitches or contact instabilities in the MP solver.
+            Recording (especially with <code>--num-procs</code> or multiple runs) leaves several <code>trajectory.h5</code> shards. <code>utils/merge_trajectory.py</code> gathers everything matching a filename pattern and writes one combined HDF5.
           </p>
-          <pre class="code-block my-4"><span class="c-comment"># Step through one episode in the viewer (space to play/pause)</span>
-<span class="c-prompt">$</span> python <span class="c-flag">-m</span> utils.replay <span class="c-flag">--demo</span> demos/grasp_part/100221/ep_0.h5
+          <pre class="code-block my-4"><span class="c-prompt">$</span> python utils/merge_trajectory.py \
+    <span class="c-flag">-i</span> demos/grasp_part/100221 \
+    <span class="c-flag">-o</span> demos/grasp_part/100221/trajectory.h5 \
+    <span class="c-flag">-p</span> trajectory.h5</pre>
+          <p><code>-i</code> takes one or more input dirs; <code>-p</code> is the filename pattern to collect (default <code>trajectory.h5</code>); <code>-s True</code> (default) keeps only successful trajectories.</p>
 
-<span class="c-comment"># Render-only (no viewer) → dumps an MP4 next to the input</span>
-<span class="c-prompt">$</span> python <span class="c-flag">-m</span> utils.replay <span class="c-flag">--demo</span> demos/peg_in_hole/100221/ep_5.h5 <span class="c-flag">--render-mode</span> rgb_array</pre>
-
-          <h2 id="shard-layout">Shard layout</h2>
+          <h2 id="replay">Step B — Replay (render observations)</h2>
           <p>
-            Large recordings are typically broken into shards: one folder per asset (<code>demos/grasp_part/&lt;asset_id&gt;/</code>) and one HDF5 per seed (<code>ep_&lt;idx&gt;.h5</code>). This makes parallel collection trivial — kick off one <code>record.py</code> per asset on N machines — but means downstream tools see a tree of files, not one dataset.
+            <code>utils/replay_trajectory.py</code> re-runs the merged trajectory in SAPIEN and renders observations. The output filename encodes the obs / control / backend so converters can find the right file: <code>trajectory.&lt;obs&gt;.&lt;control&gt;.&lt;backend&gt;.h5</code>.
           </p>
-
-          <h2 id="merge">Merging across shards</h2>
+          <pre class="code-block my-4"><span class="c-prompt">$</span> python utils/replay_trajectory.py \
+    <span class="c-flag">--traj-path</span> demos/grasp_part/100221/trajectory.h5 \
+    <span class="c-flag">-o</span> rgb \
+    <span class="c-flag">-c</span> pd_joint_delta_pos \
+    <span class="c-flag">-b</span> physx_cpu \
+    <span class="c-flag">--use-first-env-state</span> \
+    <span class="c-flag">--save-traj</span> \
+    <span class="c-flag">--save-video</span> \
+    <span class="c-flag">--shader</span> default
+<span class="c-comment"># → demos/grasp_part/100221/trajectory.rgb.pd_joint_delta_pos.physx_cpu.h5</span></pre>
           <p>
-            The replay module also exposes a <code>--merge</code> entrypoint that gathers every episode under a glob pattern, sorts them deterministically, and writes a single <code>combined.h5</code> with a contiguous episode index. Most VLA training loaders prefer one fat file.
+            <code>--save-traj</code> writes the observation-augmented HDF5 (required for conversion); <code>--save-video</code> additionally dumps MP4s for visual QA; <code>--use-first-env-state</code> seeds each replay from the recorded initial state for determinism.
           </p>
-          <pre class="code-block my-4"><span class="c-comment"># Merge every grasp_part demo across all assets/seeds into one HDF5</span>
-<span class="c-prompt">$</span> python <span class="c-flag">-m</span> utils.replay <span class="c-flag">--merge</span> <span class="c-str">"demos/grasp_part/*/ep_*.h5"</span> \
-    <span class="c-flag">--output</span> demos/grasp_part/combined.h5
-
-<span class="c-comment"># Same, but pull a specific subset of assets</span>
-<span class="c-prompt">$</span> python <span class="c-flag">-m</span> utils.replay <span class="c-flag">--merge</span> <span class="c-str">"demos/grasp_part/{100221,103594,103693}/ep_*.h5"</span> \
-    <span class="c-flag">--output</span> demos/grasp_part/subset.h5</pre>
 
           <h2 id="flag-summary">Common flags</h2>
           <table class="ref-table">
-            <thead><tr><th>Flag</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Tool / flag</th><th>Notes</th></tr></thead>
             <tbody>
-              <tr><td><code>--demo</code></td><td>Path to one <code>.h5</code> trajectory</td></tr>
-              <tr><td><code>--merge</code></td><td>Glob pattern over many <code>.h5</code> files</td></tr>
-              <tr><td><code>--output</code></td><td>Where to write the merged file</td></tr>
-              <tr><td><code>--render-mode</code></td><td><code>human</code> (viewer) or <code>rgb_array</code> (writes MP4)</td></tr>
-              <tr><td><code>--speed</code></td><td>Playback speed multiplier (default 1.0)</td></tr>
+              <tr><td><code>merge_trajectory.py -i</code></td><td>Input dir(s) to scan</td></tr>
+              <tr><td><code>merge_trajectory.py -o</code></td><td>Output merged <code>.h5</code> path</td></tr>
+              <tr><td><code>merge_trajectory.py -p</code></td><td>Filename pattern (default <code>trajectory.h5</code>)</td></tr>
+              <tr><td><code>merge_trajectory.py -s</code></td><td>Only merge successful trajectories (default <code>True</code>)</td></tr>
+              <tr><td><code>replay_trajectory.py --traj-path</code></td><td>Trajectory <code>.h5</code> to replay</td></tr>
+              <tr><td><code>-o</code> / <code>--obs-mode</code></td><td>e.g. <code>rgb</code>, <code>rgbd</code>, <code>state</code></td></tr>
+              <tr><td><code>-c</code> / <code>--target-control-mode</code></td><td>e.g. <code>pd_joint_delta_pos</code></td></tr>
+              <tr><td><code>-b</code> / <code>--sim-backend</code></td><td>e.g. <code>physx_cpu</code></td></tr>
+              <tr><td><code>--save-traj</code> / <code>--save-video</code></td><td>Write the replayed <code>.h5</code> / MP4s</td></tr>
+              <tr><td><code>--use-first-env-state</code></td><td>Deterministic replay from recorded init state</td></tr>
             </tbody>
           </table>
-          <p class="text-[13px] text-muted dark:text-d-muted">Canonical source: <code>python -m utils.replay --help</code>.</p>
+          <p class="text-[13px] text-muted dark:text-d-muted">Canonical source: <code>python utils/merge_trajectory.py --help</code> · <code>python utils/replay_trajectory.py --help</code>.</p>
         </div>
 
         <nav class="mt-12 pt-6 hairline-t flex items-center justify-between">
@@ -226,9 +232,8 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#visual-replay" class="toc-item">Visual replay</a>
-          <a href="#shard-layout" class="toc-item">Shard layout</a>
-          <a href="#merge" class="toc-item">Merging across shards</a>
+          <a href="#merge" class="toc-item">Step A — Merge shards</a>
+          <a href="#replay" class="toc-item">Step B — Replay</a>
           <a href="#flag-summary" class="toc-item">Common flags</a>
         </nav>
       </aside>

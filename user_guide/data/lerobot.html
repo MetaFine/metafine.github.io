@@ -159,49 +159,45 @@
       <main class="col-span-12 lg:col-span-7 pt-10 pb-16">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-4">User Guide · Data Pipelines · LeRobot export</div>
         <h1 class="text-[40px] font-semibold leading-[1.10] tracking-h2 text-ink dark:text-d-ink mb-4">LeRobot export</h1>
-        <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">MetaFine's native HDF5 layout converts cleanly into the HuggingFace <strong class="text-ink dark:text-d-ink font-medium">LeRobot</strong> dataset format — the standard consumed by ACT, DP3, π0, and most modern VLA training stacks. One CLI call walks a demo tree and writes a versioned LeRobot dataset, ready for <code class="font-mono">datasets.load_dataset</code>.</p>
+        <p class="text-[18px] leading-[1.55] text-body dark:text-d-body mb-2">A <strong class="text-ink dark:text-d-ink font-medium">replayed</strong> trajectory converts cleanly into the HuggingFace <strong class="text-ink dark:text-d-ink font-medium">LeRobot</strong> dataset format — the input to the verified LeRobot and StarVLA training paths. <code class="font-mono">utils/convert_to_lerobot.py</code> reads the observation-augmented <code>.h5</code> produced by <a href="replay.html">replay</a> and writes a LeRobot dataset directory.</p>
 
         <div class="prose-doc mt-8">
 
-          <h2 id="convert">Convert a demo tree</h2>
+          <h2 id="convert">Convert a replayed trajectory</h2>
           <p>
-            Point the converter at any subdirectory of <code>demos/</code>. It recursively gathers every <code>ep_*.h5</code>, transcribes the per-step arrays into the LeRobot column schema, and writes parquet shards under <code>--output</code>.
+            Point <code>--traj-path</code> at the <em>replayed</em> file (the one whose name encodes obs / control / backend, e.g. <code>trajectory.rgb.pd_joint_delta_pos.physx_cpu.h5</code>) — not the raw recording. <code>--task-name</code> is the natural-language instruction baked into every frame; keep it consistent with what you'll pass at eval time.
           </p>
-          <pre class="code-block my-4"><span class="c-comment"># Convert every grasp_part demo to a LeRobot dataset on disk</span>
-<span class="c-prompt">$</span> python <span class="c-flag">-m</span> utils.export_lerobot \
-    <span class="c-flag">--demos</span> demos/grasp_part/ \
-    <span class="c-flag">--output</span> datasets/metafine_grasp_part_lerobot \
-    <span class="c-flag">--repo-id</span> <span class="c-str">metafine/grasp_part</span></pre>
+          <pre class="code-block my-4"><span class="c-prompt">$</span> python utils/convert_to_lerobot.py \
+    <span class="c-flag">--traj-path</span> demos/grasp_part/100221/trajectory.rgb.pd_joint_delta_pos.physx_cpu.h5 \
+    <span class="c-flag">--output-dir</span> demos/grasp_part/lerobot_grasp_part \
+    <span class="c-flag">--task-name</span> <span class="c-str">"Grasp the cap of the bottle."</span> \
+    <span class="c-flag">--fps</span> 30 \
+    <span class="c-flag">--robot-type</span> panda</pre>
 
-          <h2 id="schema">Resulting dataset shape</h2>
-          <p>The output dataset follows the standard LeRobot column schema:</p>
+          <h2 id="flags">Flags</h2>
           <table class="ref-table">
-            <thead><tr><th>Column</th><th>Dtype / shape</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Flag</th><th>Default</th><th>Notes</th></tr></thead>
             <tbody>
-              <tr><td><code>observation.image</code></td><td><code>uint8 [H, W, 3]</code></td><td>Third-person camera frame at the current step</td></tr>
-              <tr><td><code>observation.state</code></td><td><code>float32 [D_state]</code></td><td>Joint positions + gripper opening</td></tr>
-              <tr><td><code>action</code></td><td><code>float32 [D_action]</code></td><td>Either joint deltas or end-effector pose, depending on the recording controller</td></tr>
-              <tr><td><code>episode_index</code></td><td><code>int64</code></td><td>Contiguous episode id across the whole shard</td></tr>
-              <tr><td><code>frame_index</code></td><td><code>int64</code></td><td>Step index within the episode</td></tr>
-              <tr><td><code>timestamp</code></td><td><code>float64</code></td><td>Seconds since episode start (30 FPS)</td></tr>
-              <tr><td><code>next.reward</code></td><td><code>float32</code></td><td>0 throughout; 1 on the success-terminal frame</td></tr>
-              <tr><td><code>next.done</code></td><td><code>bool</code></td><td>True on the final frame of each episode</td></tr>
+              <tr><td><code>--traj-path</code></td><td>—</td><td>The replayed (obs-augmented) <code>.h5</code></td></tr>
+              <tr><td><code>--output-dir</code></td><td>—</td><td>LeRobot dataset directory to write</td></tr>
+              <tr><td><code>--task-name</code></td><td><code>None</code></td><td>Natural-language instruction stored per frame</td></tr>
+              <tr><td><code>--fps</code></td><td>30</td><td>Dataset frame rate</td></tr>
+              <tr><td><code>--robot-type</code></td><td><code>None</code></td><td>e.g. <code>panda</code></td></tr>
+              <tr><td><code>--chunks-size</code></td><td>default</td><td>Parquet chunk size</td></tr>
+              <tr><td><code>--image-size</code></td><td><code>None</code></td><td>Optional resize, e.g. <code>224x224</code></td></tr>
+              <tr><td><code>--max-episodes</code></td><td><code>None</code></td><td>Cap episodes converted (debugging)</td></tr>
             </tbody>
           </table>
 
-          <h2 id="train">Loading into a training run</h2>
-          <p>From there, any LeRobot-compatible trainer just works:</p>
-          <pre class="code-block my-4"><span class="c-comment"># Loads the dataset into a standard LeRobot trainer</span>
-<span class="c-prompt">&gt;&gt;&gt;</span> from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-<span class="c-prompt">&gt;&gt;&gt;</span> ds = LeRobotDataset(<span class="c-str">"metafine/grasp_part"</span>, root=<span class="c-str">"datasets/metafine_grasp_part_lerobot"</span>)
-<span class="c-prompt">&gt;&gt;&gt;</span> ds[<span class="c-str">0</span>][<span class="c-str">"observation.image"</span>].shape
-torch.Size([<span class="c-str">3</span>, <span class="c-str">224</span>, <span class="c-str">224</span>])</pre>
-
-          <h2 id="push">Pushing to the HuggingFace Hub</h2>
+          <h2 id="train">Feeding training</h2>
           <p>
-            With <code>--push-to-hub</code> the converter will also upload the resulting dataset under the supplied <code>--repo-id</code>. You'll need <code>huggingface-cli login</code> beforehand. This is the workflow we use for MetaFine's public splits.
+            The output directory is a standard LeRobot dataset. Two verified training paths consume it:
           </p>
-          <p class="text-[13px] text-muted dark:text-d-muted">Canonical source: <code>python -m utils.export_lerobot --help</code>.</p>
+          <ul>
+            <li><strong>LeRobot</strong> — point the standard LeRobot training pipeline at <code>--output-dir</code>.</li>
+            <li><strong>StarVLA</strong> — copy the dataset under <code>core/policies/starvla/starVLA/playground/Dataset/</code>. StarVLA expects LeRobot&nbsp;2.1; if you produced a 3.0 dataset, convert it with <code>lerobot_v30_to_v21</code> and add a <code>modality.json</code> to <code>meta/</code>. See <code>core/policies/starvla/train/README.md</code>.</li>
+          </ul>
+          <p class="text-[13px] text-muted dark:text-d-muted">Canonical source: <code>python utils/convert_to_lerobot.py --help</code>.</p>
 
         </div>
 
@@ -226,10 +222,9 @@ torch.Size([<span class="c-str">3</span>, <span class="c-str">224</span>, <span 
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#convert" class="toc-item">Convert a demo tree</a>
-          <a href="#schema" class="toc-item">Resulting dataset shape</a>
-          <a href="#train" class="toc-item">Loading into a training run</a>
-          <a href="#push" class="toc-item">Pushing to the HuggingFace Hub</a>
+          <a href="#convert" class="toc-item">Convert a replayed trajectory</a>
+          <a href="#flags" class="toc-item">Flags</a>
+          <a href="#train" class="toc-item">Feeding training</a>
         </nav>
       </aside>
     </div>

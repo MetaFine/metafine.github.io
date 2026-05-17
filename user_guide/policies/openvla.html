@@ -163,53 +163,20 @@
 
         <div class="prose-doc mt-8">
 
-          <h2 id="openvla">OpenVLA</h2>
-          <h3>Install</h3>
-          <pre class="code-block my-4"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla</pre>
+          <h2 id="what">What they are</h2>
+          <p>OpenVLA (7B vision-language-action model) and OpenVLA-OFT (its optimised fine-tuning variant). Vendored under <code>core/policies/openvla</code> and <code>core/policies/openvla-oft</code>.</p>
 
-          <h3>Fine-tune</h3>
-          <p>Convert your MetaFine demos to RLDS first, then run the bundled LoRA-fine-tune script:</p>
-          <pre class="code-block my-4"><span class="c-prompt">$</span> python <span class="c-flag">-m</span> utils.export_rlds <span class="c-flag">--demos</span> demos/lid_opening/ \
-    <span class="c-flag">--output</span> datasets/lid_opening_rlds
+          <h2 id="data">Data — RLDS</h2>
+          <p>Both consume the <a href="../data/rlds.html">RLDS</a> export. Produce it with <code>utils/convert_to_rlds.py</code> after recording (see <a href="../getting_started/quickstart.html">Quickstart</a>).</p>
+          <pre class="code-block my-4"><span class="c-prompt">$</span> python utils/convert_to_rlds.py <span class="c-flag">-i</span> demos/lid_opening/100221 <span class="c-flag">-o</span> demos/datasets/rlds <span class="c-flag">--dataset-name</span> lid_opening_rlds <span class="c-flag">--image-size</span> 256</pre>
 
-<span class="c-prompt">$</span> python core/policies/openvla/finetune.py \
-    <span class="c-flag">--dataset</span> datasets/lid_opening_rlds \
-    <span class="c-flag">--base-model</span> openvla/openvla-7b \
-    <span class="c-flag">--lora-rank</span> 32 \
-    <span class="c-flag">--epochs</span> 5 \
-    <span class="c-flag">--output</span> checkpoints/openvla_lid_opening</pre>
-
-          <h3>Diagnostic evaluation</h3>
-          <pre class="code-block my-4"><span class="c-prompt">$</span> python core/policies/openvla/evaluate.py \
-    <span class="c-flag">--task-graph</span> configs/lid_opening.yaml \
-    <span class="c-flag">--checkpoint</span> checkpoints/openvla_lid_opening \
-    <span class="c-flag">--episodes</span> 30 <span class="c-flag">--smoothness</span></pre>
-
-          <h2 id="oft">OpenVLA-OFT</h2>
-          <p>
-            <strong>OFT</strong> (optimised fine-tuning) ships an action-decoding head + parallel decoding scheme on top of OpenVLA. In MetaFine it's exposed as a parallel subpackage; the data path and CLI are identical except for the binary name.
-          </p>
-          <h3>Install</h3>
-          <pre class="code-block my-4"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla_oft</pre>
-
-          <h3>Fine-tune &amp; evaluate</h3>
-          <pre class="code-block my-4"><span class="c-prompt">$</span> python core/policies/openvla_oft/finetune.py \
-    <span class="c-flag">--dataset</span> datasets/lid_opening_rlds \
-    <span class="c-flag">--base-model</span> openvla/openvla-7b-oft \
-    <span class="c-flag">--epochs</span> 5 \
-    <span class="c-flag">--output</span> checkpoints/oft_lid_opening
-
-<span class="c-prompt">$</span> python core/policies/openvla_oft/evaluate.py \
-    <span class="c-flag">--task-graph</span> configs/lid_opening.yaml \
-    <span class="c-flag">--checkpoint</span> checkpoints/oft_lid_opening \
-    <span class="c-flag">--episodes</span> 30 <span class="c-flag">--smoothness</span></pre>
-
-          <h2 id="notes">Notes &amp; caveats</h2>
-          <ul>
-            <li><strong>Memory.</strong> Full 7B fine-tune needs ≥40 GB; LoRA fits on a single A100 40 GB.</li>
-            <li><strong>OFT vs. OpenVLA.</strong> Same data, same eval — OFT is generally faster at inference and slightly stronger on smoothness scores in our internal sweeps.</li>
-            <li><strong>Camera setup.</strong> OpenVLA-family models assume a single third-person view; MetaFine's default recording rig matches.</li>
-          </ul>
+          <h2 id="install">Install &amp; run</h2>
+          <pre class="code-block my-4"><span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla
+<span class="c-prompt">$</span> pip install <span class="c-flag">-e</span> core/policies/openvla-oft</pre>
+          <p>OpenVLA / OFT training + evaluation flags live in their own in-repo guides:</p>
+          <pre class="code-block my-4"><span class="c-prompt">$</span> cat core/policies/openvla/README.md
+<span class="c-prompt">$</span> cat core/policies/openvla-oft/README.md</pre>
+          <p class="text-[13px] text-muted dark:text-d-muted">Status: vendored. Paths are <code>openvla</code> and <code>openvla-oft</code> (hyphen). Treat the per-package READMEs as the source of truth.</p>
 
         </div>
 
@@ -234,9 +201,9 @@
       <aside class="hidden xl:block col-span-2 sticky-side pt-10 pb-12">
         <div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted dark:text-d-muted mb-3">On this page</div>
         <nav class="space-y-0.5" id="toc">
-          <a href="#openvla" class="toc-item">OpenVLA</a>
-          <a href="#oft" class="toc-item">OpenVLA-OFT</a>
-          <a href="#notes" class="toc-item">Notes &amp; caveats</a>
+          <a href="#what" class="toc-item">What they are</a>
+          <a href="#data" class="toc-item">Data — RLDS</a>
+          <a href="#install" class="toc-item">Install &amp; run</a>
         </nav>
       </aside>
     </div>

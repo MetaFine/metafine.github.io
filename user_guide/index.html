@@ -250,9 +250,9 @@
             Every evaluation run emits a single <code>results.json</code> carrying <em>all three</em>, so two policies can be compared apples-to-apples across the full diagnostic plane, not just on a headline number.
           </p>
 
-          <h2 id="quick-example">A 60-second example</h2>
+          <h2 id="quick-example">The pipeline at a glance</h2>
           <p>
-            A complete record → diagnostic-eval loop in three commands. Below is a sample of tasks that MetaFine ships with — scroll horizontally to browse.
+            Record → merge → replay → convert → train → evaluate. The condensed commands are below; the <a href="getting_started/quickstart.html">Quickstart</a> walks each step. First, a sample of tasks MetaFine ships with — scroll horizontally to browse.
           </p>
         </div>
 
@@ -353,18 +353,18 @@
         </div>
 
         <div class="prose-doc">
-          <pre class="code-block my-4"><span class="c-comment"># 1. Record 5 expert demonstrations for the `grasp_part` task on asset 100221</span>
-<span class="c-prompt">$</span> python record.py <span class="c-flag">--task</span> grasp_part <span class="c-flag">--object</span> 100221 <span class="c-flag">--trials</span> 5
-<span class="c-comment">#    → demos/grasp_part/100221/{ep_*.h5, ep_*.mp4}</span>
+          <pre class="code-block my-4"><span class="c-comment"># 1. Record expert demos — single skill, or --task-graph for a multi-stage env</span>
+<span class="c-prompt">$</span> python record.py <span class="c-flag">-e</span> grasp_part <span class="c-flag">--object-name</span> 100221 <span class="c-flag">--part-name</span> cap <span class="c-flag">-n</span> 5 <span class="c-flag">--only-count-success</span>
 
-<span class="c-comment"># 2. Replay one demo to verify the trajectory looks right</span>
-<span class="c-prompt">$</span> python <span class="c-flag">-m</span> utils.replay <span class="c-flag">--demo</span> demos/grasp_part/100221/ep_0.h5
+<span class="c-comment"># 2. Merge shards → 3. Replay (render observations)</span>
+<span class="c-prompt">$</span> python utils/merge_trajectory.py <span class="c-flag">-i</span> demos/grasp_part/100221 <span class="c-flag">-o</span> demos/grasp_part/100221/trajectory.h5 <span class="c-flag">-p</span> trajectory.h5
+<span class="c-prompt">$</span> python utils/replay_trajectory.py <span class="c-flag">--traj-path</span> demos/grasp_part/100221/trajectory.h5 <span class="c-flag">-o</span> rgb <span class="c-flag">-c</span> pd_joint_delta_pos <span class="c-flag">-b</span> physx_cpu <span class="c-flag">--use-first-env-state</span> <span class="c-flag">--save-traj</span> <span class="c-flag">--save-video</span>
 
-<span class="c-comment"># 3. (After training a policy) run the three-dimension diagnostic eval</span>
-<span class="c-prompt">$</span> python core/policies/&lt;policy&gt;/evaluate.py \
-    <span class="c-flag">--task-graph</span> configs/example_grasp_cap.yaml \
-    <span class="c-flag">--checkpoint</span> /path/to/ckpt <span class="c-flag">--episodes</span> 30
-<span class="c-comment">#    → results.json with stage / AUSC / smoothness scores</span></pre>
+<span class="c-comment"># 4. Convert for training (LeRobot, or convert_to_rlds for OpenVLA)</span>
+<span class="c-prompt">$</span> python utils/convert_to_lerobot.py <span class="c-flag">--traj-path</span> .../trajectory.rgb.pd_joint_delta_pos.physx_cpu.h5 <span class="c-flag">--output-dir</span> lerobot_grasp_part <span class="c-flag">--task-name</span> <span class="c-str">"Grasp the cap."</span> <span class="c-flag">--fps</span> 30 <span class="c-flag">--robot-type</span> panda
+
+<span class="c-comment"># 5. Train (LeRobot / StarVLA)  →  6. Evaluate the checkpoint closed-loop</span>
+<span class="c-prompt">$</span> python core/policies/pi05/evaluate.py <span class="c-flag">--policy-path</span> /path/to/model <span class="c-flag">--env-id</span> grasp_part <span class="c-flag">--object-name</span> 100221 <span class="c-flag">--part-name</span> cap <span class="c-flag">--n-episodes</span> 50 <span class="c-flag">--task</span> <span class="c-str">"Grasp the cap."</span></pre>
 
           <h2 id="hybrid">Beyond simulation: real-sim hybrid evaluation</h2>
           <p>
@@ -442,7 +442,7 @@
           <ul>
             <li><strong>Composable skills.</strong> 21 affordance-typed atomic skills (grasp, rotate, slide, insert, …) compose into multi-step task graphs via YAML or Python. Adding a long-horizon task is a 30-line YAML, not a new env class.</li>
             <li><strong>Affordance-aware asset library.</strong> 40+ part-annotated articulated objects, each declaring its part-level affordances in <code>capabilities.json</code>. The skill ↔ asset compatibility check is a closed-set lookup, not a heuristic.</li>
-            <li><strong>VLA-ready out of the box.</strong> ACT / DP3 / OpenVLA / OpenVLA-OFT / π0 / π0.5 / StarVLA all share the same record → train → diagnostic-eval pipeline; LeRobot and RLDS exports are first-class.</li>
+            <li><strong>VLA-ready.</strong> A shared data pipeline (record → merge → replay → convert) feeds LeRobot and RLDS exports. Seven backbones are vendored (ACT / DP3 / OpenVLA / OpenVLA-OFT / π0 / π0.5 / StarVLA); training is verified via the LeRobot and StarVLA paths, and π0.5 closed-loop inference is verified.</li>
           </ul>
 
           <h2 id="how-this-guide-is-organised">How this guide is organised</h2>
