@@ -165,10 +165,10 @@
 
           <h2 id="convert">Convert a replayed trajectory</h2>
           <p>
-            Point <code>--traj-path</code> at the <em>replayed</em> file (the one whose name encodes obs / control / backend, e.g. <code>trajectory.rgb.pd_joint_delta_pos.physx_cpu.h5</code>) — not the raw recording. <code>--task-name</code> is the natural-language instruction baked into every frame; keep it consistent with what you'll pass at eval time.
+            Point <code>--traj-path</code> at the <em>replayed</em> file (the one whose name encodes obs / control / backend, e.g. <code>merged.rgb.pd_joint_pos.physx_cpu.h5</code> — use the recording's control mode) — not the raw recording. <code>--task-name</code> is the natural-language instruction baked into every frame; keep it consistent with what you'll pass at eval time.
           </p>
           <pre class="code-block my-4"><span class="c-prompt">$</span> python utils/convert_to_lerobot.py \
-    <span class="c-flag">--traj-path</span> demos/grasp_part/100221/trajectory.rgb.pd_joint_delta_pos.physx_cpu.h5 \
+    <span class="c-flag">--traj-path</span> demos/grasp_part/merged.rgb.pd_joint_pos.physx_cpu.h5 \
     <span class="c-flag">--output-dir</span> demos/grasp_part/lerobot_grasp_part \
     <span class="c-flag">--task-name</span> <span class="c-str">"Grasp the cap of the bottle."</span> \
     <span class="c-flag">--fps</span> 30 \

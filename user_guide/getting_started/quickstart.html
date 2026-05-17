@@ -203,37 +203,42 @@
           <p>The recorder drives a Franka arm with a motion-planning solver, so every saved trial is a successful expert demonstration.</p>
           <p><strong>Single skill</strong> — pick a registered env id, an asset, and a part:</p>
           <pre class="code-block"><span class="c-prompt">$</span> python record.py <span class="c-flag">-e</span> grasp_part <span class="c-flag">--object-name</span> 100221 <span class="c-flag">--part-name</span> cap <span class="c-flag">-n</span> 5 <span class="c-flag">--only-count-success</span>
-<span class="c-comment"># → demos/.../trajectory.h5  (+ .mp4 sanity videos)</span></pre>
+<span class="c-comment"># → demos/grasp_part/trial_0001/trajectory.h5  (one dir per trial)</span></pre>
           <p><strong>Composite task</strong> — drive a multi-stage task graph (a multi-task env) instead of a single skill:</p>
-          <pre class="code-block"><span class="c-prompt">$</span> python record.py <span class="c-flag">--task-graph</span> configs/example_grasp_cap.yaml <span class="c-flag">-n</span> 5</pre>
-          <p>Env ids include <code>grasp_part</code>, <code>peg_in_hole</code>, <code>toggle_switch</code>, <code>lid_opening</code>, <code>slide_along</code>, <code>plug_charger</code>, <code>stack_pyramid</code>, <code>draw_triangle</code>, … (full list in the <a href="../reference/tasks.html">Task catalogue</a>). Output goes under <code>demos/</code> — override with <code>--record-dir</code>.</p>
+          <pre class="code-block"><span class="c-prompt">$</span> python record.py <span class="c-flag">--task-graph</span> configs/example_grasp_cap.yaml <span class="c-flag">-n</span> 5 <span class="c-flag">--only-count-success</span></pre>
+          <p>Env ids include <code>grasp_part</code>, <code>peg_in_hole</code>, <code>toggle_switch</code>, <code>lid_opening</code>, <code>slide_along</code>, <code>plug_charger</code>, <code>stack_pyramid</code>, <code>draw_triangle</code>, … (full list in the <a href="../reference/tasks.html">Task catalogue</a>).</p>
+          <p>Output layout is <code>&lt;record-dir&gt;/&lt;env&gt;/trial_NNNN/{trajectory.h5, trajectory.json}</code> — one sub-directory per trial (override <code>--record-dir</code>, default <code>demos/</code>). With <code>--only-count-success</code> the recorder retries until <code>-n</code> trials succeed; failed attempts leave empty trial dirs, successful ones also carry a <code>.mp4</code>.</p>
 
           <h2 id="merge">Step 2 — Merge trajectory shards</h2>
-          <p>Multiple recording runs / processes produce several <code>trajectory.h5</code> shards. Merge them into one before replay:</p>
+          <p>Recording produces one <code>trajectory.h5</code> per <code>trial_NNNN/</code> sub-dir. Point <code>-i</code> at the env directory; merge recurses into the trial dirs and writes one combined HDF5:</p>
           <pre class="code-block"><span class="c-prompt">$</span> python utils/merge_trajectory.py \
-    <span class="c-flag">-i</span> demos/grasp_part/100221 \
-    <span class="c-flag">-o</span> demos/grasp_part/100221/trajectory.h5 \
+    <span class="c-flag">-i</span> demos/grasp_part \
+    <span class="c-flag">-o</span> demos/grasp_part/merged.h5 \
     <span class="c-flag">-p</span> trajectory.h5</pre>
-          <p><code>-p</code> is the filename pattern to collect; <code>-s True</code> (default) keeps only successful trajectories.</p>
+          <p><code>-p</code> is the filename pattern to collect; <code>-s True</code> (default) keeps only successful trajectories — pass <code>-s False</code> to keep all.</p>
 
           <h2 id="replay">Step 3 — Replay (render observations)</h2>
-          <p>Recording stores actions + states only. Replay re-runs each trajectory to render observations under a chosen obs / control / backend, writing a new <code>.h5</code> whose name encodes those choices:</p>
+          <p>Recording stores actions + env states only. Replay re-runs each trajectory to render observations, writing a new <code>.h5</code> whose name encodes the obs/control/backend choice.</p>
+          <p><strong>Match the recording's control mode.</strong> Each env records in its own control mode (check <code>trajectory.json</code> → <code>env_kwargs.control_mode</code>; e.g. <code>grasp_part</code> records <code>pd_joint_pos</code>). Pass that same mode to <code>-c</code> and use <code>--use-env-states</code> for a deterministic, faithful replay. Converting to a <em>different</em> control mode is allowed but does action-replay (no <code>--use-env-states</code>) and noticeably lowers reproduction success.</p>
           <pre class="code-block"><span class="c-prompt">$</span> python utils/replay_trajectory.py \
-    <span class="c-flag">--traj-path</span> demos/grasp_part/100221/trajectory.h5 \
+    <span class="c-flag">--traj-path</span> demos/grasp_part/merged.h5 \
     <span class="c-flag">-o</span> rgb \
-    <span class="c-flag">-c</span> pd_joint_delta_pos \
+    <span class="c-flag">-c</span> pd_joint_pos <span class="c-comment"># ← same control mode the recording used</span> \
     <span class="c-flag">-b</span> physx_cpu \
-    <span class="c-flag">--use-first-env-state</span> \
+    <span class="c-flag">--use-env-states</span> \
     <span class="c-flag">--save-traj</span> \
     <span class="c-flag">--save-video</span> \
     <span class="c-flag">--shader</span> default
-<span class="c-comment"># → demos/grasp_part/100221/trajectory.rgb.pd_joint_delta_pos.physx_cpu.h5</span></pre>
+<span class="c-comment"># → demos/grasp_part/merged.rgb.pd_joint_pos.physx_cpu.h5</span></pre>
+          <p>For <strong>task-graph</strong> data also pass <code>--allow-failure</code>: replay is task-graph-agnostic (it can't re-evaluate the goal predicate), so success is decided at record time — replay must not re-filter on its own success check.</p>
+          <pre class="code-block"><span class="c-prompt">$</span> python utils/replay_trajectory.py <span class="c-flag">--traj-path</span> &lt;merged&gt;.h5 \
+    <span class="c-flag">-o</span> rgb <span class="c-flag">-c</span> pd_joint_pos <span class="c-flag">-b</span> physx_cpu <span class="c-flag">--use-env-states</span> <span class="c-flag">--allow-failure</span> <span class="c-flag">--save-traj</span></pre>
 
           <h2 id="convert">Step 4 — Convert for training</h2>
           <p>Convert the <em>replayed</em> trajectory into a training format. Two targets:</p>
           <p><strong>LeRobot</strong> (for LeRobot / StarVLA training):</p>
           <pre class="code-block"><span class="c-prompt">$</span> python utils/convert_to_lerobot.py \
-    <span class="c-flag">--traj-path</span> demos/grasp_part/100221/trajectory.rgb.pd_joint_delta_pos.physx_cpu.h5 \
+    <span class="c-flag">--traj-path</span> demos/grasp_part/merged.rgb.pd_joint_pos.physx_cpu.h5 \
     <span class="c-flag">--output-dir</span> demos/grasp_part/lerobot_grasp_part \
     <span class="c-flag">--task-name</span> <span class="c-str">"Grasp the cap of the bottle."</span> \
     <span class="c-flag">--fps</span> 30 \

@@ -235,14 +235,18 @@
           </p>
 
           <h2 id="output">Output layout</h2>
-          <p>Each call writes one HDF5 trajectory (all episodes inside) plus videos under <code>--record-dir</code> (default <code>demos/</code>), named by <code>--traj-name</code> (default <code>trajectory</code>):</p>
+          <p>Recording writes <strong>one sub-directory per trial</strong> under <code>--record-dir</code> (default <code>demos/</code>):</p>
           <pre class="code-block my-4"><span class="c-comment">demos/
-&nbsp; &lt;env&gt;/&lt;object&gt;/
-&nbsp;   trajectory.h5      # ManiSkill RecordEpisode HDF5 (actions + env states)
-&nbsp;   trajectory.json    # episode metadata (env id, asset, control mode, …)
-&nbsp;   videos/ *.mp4      # third-person rollout videos for visual QA</span></pre>
+&nbsp; &lt;env&gt;/
+&nbsp;   trial_0001/
+&nbsp;     trajectory.h5    # ManiSkill RecordEpisode HDF5 (actions + env states)
+&nbsp;     trajectory.json  # episode metadata (env id, asset, control_mode, success)
+&nbsp;   trial_0002/
+&nbsp;     trajectory.h5
+&nbsp;     trajectory.json
+&nbsp;     0.mp4            # only present on successful trials</span></pre>
           <p>
-            Recording stores <strong>actions + env states only</strong> — observations (images / proprio) are rendered later by <a href="replay.html">replay</a>, which is what downstream training consumes. Run <a href="replay.html">merge then replay</a> before converting.
+            With <code>--only-count-success</code> the recorder retries until <code>-n</code> trials succeed; failed attempts leave a <code>trial_NNNN/</code> dir with an empty <code>trajectory.h5</code>. Recording stores <strong>actions + env states only</strong> — observations are rendered later by <a href="replay.html">replay</a>. Run <a href="replay.html">merge then replay</a> (point <code>merge -i</code> at the <code>&lt;env&gt;/</code> dir; it recurses into the <code>trial_*</code> dirs) before converting.
           </p>
 
           <h2 id="flag-summary">Common flags</h2>

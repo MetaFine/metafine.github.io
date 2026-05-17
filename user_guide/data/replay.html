@@ -176,21 +176,26 @@
 
           <h2 id="replay">Step B — Replay (render observations)</h2>
           <p>
-            <code>utils/replay_trajectory.py</code> re-runs the merged trajectory in SAPIEN and renders observations. The output filename encodes the obs / control / backend so converters can find the right file: <code>trajectory.&lt;obs&gt;.&lt;control&gt;.&lt;backend&gt;.h5</code>.
+            <code>utils/replay_trajectory.py</code> re-runs the merged trajectory in SAPIEN and renders observations. The output filename encodes the obs / control / backend: <code>merged.&lt;obs&gt;.&lt;control&gt;.&lt;backend&gt;.h5</code>.
+          </p>
+          <p>
+            <strong>Match the recording's control mode.</strong> Each env records in its own control mode — check <code>trajectory.json</code> → <code>env_kwargs.control_mode</code> (e.g. <code>grasp_part</code> records <code>pd_joint_pos</code>). Pass that same mode to <code>-c</code> and use <code>--use-env-states</code> for a deterministic, faithful replay. Converting to a <em>different</em> control mode is allowed but falls back to action-replay (<code>--use-env-states</code> is rejected for cross-control-mode) and markedly lowers reproduction success.
           </p>
           <pre class="code-block my-4"><span class="c-prompt">$</span> python utils/replay_trajectory.py \
-    <span class="c-flag">--traj-path</span> demos/grasp_part/100221/trajectory.h5 \
+    <span class="c-flag">--traj-path</span> demos/grasp_part/merged.h5 \
     <span class="c-flag">-o</span> rgb \
-    <span class="c-flag">-c</span> pd_joint_delta_pos \
+    <span class="c-flag">-c</span> pd_joint_pos <span class="c-comment"># ← same mode the recording used</span> \
     <span class="c-flag">-b</span> physx_cpu \
-    <span class="c-flag">--use-first-env-state</span> \
+    <span class="c-flag">--use-env-states</span> \
     <span class="c-flag">--save-traj</span> \
     <span class="c-flag">--save-video</span> \
     <span class="c-flag">--shader</span> default
-<span class="c-comment"># → demos/grasp_part/100221/trajectory.rgb.pd_joint_delta_pos.physx_cpu.h5</span></pre>
+<span class="c-comment"># → demos/grasp_part/merged.rgb.pd_joint_pos.physx_cpu.h5</span></pre>
           <p>
-            <code>--save-traj</code> writes the observation-augmented HDF5 (required for conversion); <code>--save-video</code> additionally dumps MP4s for visual QA; <code>--use-first-env-state</code> seeds each replay from the recorded initial state for determinism.
+            <code>--save-traj</code> writes the observation-augmented HDF5 (required for conversion); <code>--save-video</code> dumps MP4s for QA. For <strong>task-graph</strong> data add <code>--allow-failure</code>: replay can't re-evaluate the task-graph goal predicate, so success is decided at record time — replay must not re-filter on its own success check, or every task-graph demo is dropped.
           </p>
+          <pre class="code-block my-4"><span class="c-prompt">$</span> python utils/replay_trajectory.py <span class="c-flag">--traj-path</span> demos/&lt;tg-env&gt;/merged.h5 \
+    <span class="c-flag">-o</span> rgb <span class="c-flag">-c</span> pd_joint_pos <span class="c-flag">-b</span> physx_cpu <span class="c-flag">--use-env-states</span> <span class="c-flag">--allow-failure</span> <span class="c-flag">--save-traj</span></pre>
 
           <h2 id="flag-summary">Common flags</h2>
           <table class="ref-table">
@@ -199,13 +204,14 @@
               <tr><td><code>merge_trajectory.py -i</code></td><td>Input dir(s) to scan</td></tr>
               <tr><td><code>merge_trajectory.py -o</code></td><td>Output merged <code>.h5</code> path</td></tr>
               <tr><td><code>merge_trajectory.py -p</code></td><td>Filename pattern (default <code>trajectory.h5</code>)</td></tr>
-              <tr><td><code>merge_trajectory.py -s</code></td><td>Only merge successful trajectories (default <code>True</code>)</td></tr>
+              <tr><td><code>merge_trajectory.py -s</code></td><td>Only merge successful trajectories (default <code>True</code>; <code>-s False</code> keeps all)</td></tr>
               <tr><td><code>replay_trajectory.py --traj-path</code></td><td>Trajectory <code>.h5</code> to replay</td></tr>
               <tr><td><code>-o</code> / <code>--obs-mode</code></td><td>e.g. <code>rgb</code>, <code>rgbd</code>, <code>state</code></td></tr>
-              <tr><td><code>-c</code> / <code>--target-control-mode</code></td><td>e.g. <code>pd_joint_delta_pos</code></td></tr>
+              <tr><td><code>-c</code> / <code>--target-control-mode</code></td><td><strong>Match the recording's control mode</strong> (see <code>trajectory.json</code>)</td></tr>
               <tr><td><code>-b</code> / <code>--sim-backend</code></td><td>e.g. <code>physx_cpu</code></td></tr>
               <tr><td><code>--save-traj</code> / <code>--save-video</code></td><td>Write the replayed <code>.h5</code> / MP4s</td></tr>
-              <tr><td><code>--use-first-env-state</code></td><td>Deterministic replay from recorded init state</td></tr>
+              <tr><td><code>--use-env-states</code></td><td>Deterministic state replay (requires matching control mode)</td></tr>
+              <tr><td><code>--allow-failure</code></td><td>Keep all replayed episodes — required for task-graph data</td></tr>
             </tbody>
           </table>
           <p class="text-[13px] text-muted dark:text-d-muted">Canonical source: <code>python utils/merge_trajectory.py --help</code> · <code>python utils/replay_trajectory.py --help</code>.</p>
