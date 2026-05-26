@@ -1153,11 +1153,21 @@
 
   <footer class="hairline-b" style="box-shadow: inset 0 1px 0 rgba(0,0,0,0.08)">
     <div class="max-w-container mx-auto px-6 py-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-[13px] text-muted dark:text-d-muted">
-      <div class="flex items-baseline gap-2">
+      <div class="flex items-baseline gap-2 flex-wrap">
         <span class="font-semibold text-ink dark:text-d-ink"><span>Meta</span><span class="text-behave">Fine</span></span>
         <span>· 2026</span>
         <span class="hidden md:inline">·</span>
         <span class="hidden md:inline">Released under MIT (placeholder)</span>
+        <span class="hidden md:inline">·</span>
+        <!-- Site view counter — busuanzi PV + a client-side baseline offset.
+             busuanzi has no server-side seed API, so the displayed count is
+             (real busuanzi PV) + BASELINE_OFFSET. Change the offset below
+             to re-baseline. -->
+        <span id="bsz-views" class="hidden md:inline font-mono text-[12px] tracking-[0.02em]" title="Page views (baselined)">
+          <span id="busuanzi_container_site_pv" style="visibility:hidden">
+            <span id="busuanzi_value_site_pv">—</span>
+          </span><span> views</span>
+        </span>
       </div>
       <div class="flex items-center gap-5">
         <a href="mailto:contact@example.org" class="hover:text-link">contact@example.org</a>
@@ -1355,6 +1365,33 @@
         });
       });
     }
+  </script>
+
+  <!-- ─────────── Page view counter (busuanzi + client-side baseline) ───────────
+       busuanzi serves the per-URL PV from its CDN; we add BASELINE_OFFSET to the
+       displayed value so the counter starts at a sane number (no server-side
+       seed API exists for busuanzi). If busuanzi is slow / unreachable the
+       counter chip stays hidden (visibility: hidden via the wrapper span). -->
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <script>
+    (function() {
+      const BASELINE_OFFSET = 1128;
+      const valueEl = document.getElementById('busuanzi_value_site_pv');
+      const containerEl = document.getElementById('busuanzi_container_site_pv');
+      if (!valueEl || !containerEl) return;
+      let tries = 0;
+      const timer = setInterval(function() {
+        const raw = (valueEl.textContent || '').replace(/[,\s]/g, '');
+        const n = parseInt(raw, 10);
+        if (!isNaN(n) && raw !== '') {
+          valueEl.textContent = (n + BASELINE_OFFSET).toLocaleString();
+          containerEl.style.visibility = 'visible';
+          clearInterval(timer);
+          return;
+        }
+        if (++tries > 60) clearInterval(timer);  // give up after ~6s
+      }, 100);
+    })();
   </script>
 </body>
 </html>
